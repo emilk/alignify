@@ -8,7 +8,7 @@ Alignify is a python script is designed to take a peice of code and align 'block
 	{
 		int  foo  =  1;  // Some description
 		string  sausage  =  "a test string";  // Bla bla bla
-		int  bar  =  1;  // Some comment
+		int  bar  =  1;	// Some comment
 		float  z  =  1.0f;
 	}
 
@@ -20,7 +20,7 @@ And output:
 		int     foo      =  1;                // Some description
 		string  sausage  =  "a test string";  // Bla bla bla
 		int     bar      =  1;                // Some comment
-		float   x        =  1.0f;
+		float   z        =  1.0f;
 	}
 
 For a more extensive example, see test_input.txt vs test_output.txt
@@ -52,12 +52,14 @@ For a more extensive example, see test_input.txt vs test_output.txt
 * ??????
 * PROFIT!
 
+
 ## Caveats
 * Code must be indented with tabs (if at all). If you are indenting with spaces, [STOP](http://vim.wikia.com/wiki/Indent_with_tabs,_align_with_spaces). If the code is indented with tabs, Alignify can easily keep indentation intact, and align lines that start with spaces. However, if you indent your code with spaces then there is no sure-fire way for Alignify to distinguish between indentation and intent for align, eg:
 
 	    if done:  // Comment
 	        return  // Align 'return' or the comment or none?
-	    
+	        
+For this reason, support for indentation with spaces is limited.
 	    
 ## Tips and tricks:
 * To keep a code block "alive", append two empty spaces on a row ("Madonna  ")
@@ -89,8 +91,8 @@ Handle empy spaces by matching code blocks to its closest neighbor:
 		foobar          raboof
 		badger  snake   mushroom
 
-### Support for indentation with spaces
-Even though indenting code with spaces is stupid (see *Caveats*), Alignify should support it to the point where it can detect it and ignore it, so that if every line starts with a space, then all leading spaces are kept.
+### Better support for indentation with spaces
+Even though indenting code with spaces is stupid (see *Caveats*), Alignify could support it to the point where it can detect it and ignore it on per-block-level, and perhaps smartly guess what is indentation or spaces.
 
 
 ## I want to help

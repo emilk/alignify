@@ -23,51 +23,20 @@ def output(*stuff):
 	print ''.join(map(str,stuff))
 
 
-# global settings:
-g_indentdWithSpaces = False # Set to true if all lines have started with spaces.
-
-def input():
-	global g_indentdWithSpaces
-	
-	lines = []
-	
-	g_indentdWithSpaces = True
-		
-	for line in fileinput.input():
-		lines.append(line)
-		if len(line)==0 or line[0]!=' ':
-			# line did not start with space - does this disqualify us from tab-indenting?
-			# only if the line contains a block separator:
-			if re.match(r".*\s\s+.*", line):
-				g_indentdWithSpaces = False
-		
-	return lines;
-
 def main():
-	global g_indentdWithSpaces
-	
 	indents  = []
 	lines    = []
 	indent   = ""
 	
-	input_lines = input()
-	
-	for line in input_lines:
+	for line in fileinput.input():
 		spam("Read line: ", line)
-		
-		if g_indentdWithSpaces:
-			m = re.match(r"([ ]*)(.*)", line)
-		else:
-			m = re.match(r"(\t*)(.*)", line)
+		m = re.match(r"(\t*)(.*)", line)
 		tabs = m.group(1)
 		rest = m.group(2)
-		
-		spam("tabs: '", tabs, "'")
-		spam("rest: '", rest, "'")
 				
 		# Replace non-leading tabs with spaces. Any number of spaces >=2 will work.
 		# Three picked to b future proof for smart-align
-		rest = re.sub(r'\t', '   ', rest)
+		rest = re.sub(r'\t', '   ', rest);  
 	
 		if len(lines)>0 and indent!=tabs:
 			spam("new block (old tabs: ", len(indent), ", now: ", len(tabs), ")")
@@ -75,6 +44,7 @@ def main():
 			indents  = []
 			lines    = []
 	
+		spam("APPENDING")
 		indents.append(tabs)
 		lines.append(rest)
 		indent = tabs
