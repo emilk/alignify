@@ -1,0 +1,19 @@
+	void fun(  int    x,
+	           float  baz )
+	{
+		int     foo      =  1;                // Some description
+		string  sausage  =  "a test string";  // Bla bla bla
+		int     bar      =  1;                // Some comment
+		float   z        =  1.0f;
+	}
+
+First name  Last name
+Marilyn     Monroe
+Madonna     
+John        Lennon
+
+
+a    a
+apa  a
+a    a
+a    a
