@@ -52,6 +52,28 @@ For a more extensive example, see test_input.txt vs test_output.txt
 * ??????
 * PROFIT!
 
+### In Qt Creator (windows)
+
+* Choose Tools->External->Configure... from the main menu.
+* Select 'Text' in the tree-view and klick the Add-button and choose 'Add Tool'.
+* Name the tool 'Alignify'
+* Write a short description in the 'Description'-field.
+* Enter the path to your python.exe in the 'Executable'-field.
+* Enter the path too the alignify.py script in the 'Argunments'-filed
+* Change the 'Output'-dropdown menu to 'Replace Selection'.
+* Put %{CurrentDocument:Selection} in the 'Input'-field.
+* select OK or Apply.
+
+You can now use Alignify from Tools->External->Text->Alignify on the main menu.
+
+To bind the tool to a keyboard shortcut:
+
+* Select Tools->Options... on the main menu. Select the Keyboard tab.
+* SelectTools->External.Alignify on the list.
+* Enter a shortcut in the 'Key sequence'-field, e.g. Ctrl+Shift+A.
+
+Click OK and you're good to go.
+
 
 ## Caveats
 * Code must be indented with tabs (if at all). If you are indenting with spaces, [STOP](http://vim.wikia.com/wiki/Indent_with_tabs,_align_with_spaces). If the code is indented with tabs, Alignify can easily keep indentation intact, and align lines that start with spaces. However, if you indent your code with spaces then there is no sure-fire way for Alignify to distinguish between indentation and intent for align, eg:
