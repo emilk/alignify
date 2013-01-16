@@ -8,12 +8,12 @@
 	}
 
 First name  Last name
-Marilyn  Monroe
-Madonna  
 John  Lennon
+Madonna  
+Marilyn  Monroe
 
 
-a   a
-apa  a
-a    a
-a   a
+	if foo:  // Unaligned
+		some code  // Aligned
+		more code here  // Aligned
+		
