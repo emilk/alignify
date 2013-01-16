@@ -1,7 +1,7 @@
-// Everything is indented with spaces
+    // Everything is indented with spaces
 
     void fun(  int  x,
-        float  baz )
+      float  baz )
     {
         int  foo  =  1;  // Some description
         string  sausage  =  "a test string";  // Bla bla bla

@@ -1,0 +1,51 @@
+//////////////////////////////////////////////////////
+// Using tabs for indentation (as one should do!):
+
+	void fun(  int  x,
+	   float  baz )
+	{
+		int  foo  =  1;  // Some description
+		string  sausage  =  "a test string";  // Bla bla bla
+		int  bar  =  1;	// Some comment
+		float  z  =  1.0f;
+	}
+
+// Madonna has two trailing spaces:
+First name  Last name
+John  Lennon
+Madonna  
+Marilyn  Monroe
+
+
+
+	if foo:  // Unaligned
+		some code  // Aligned
+		more code here  // Aligned
+		
+
+//////////////////////////////////////////////////////
+// Using spaces for indentation (don't do this!):
+
+void fun(  int  x,
+   float  baz )
+{
+    int  foo  =  1;  // Some description
+    string  sausage  =  "a test string";  // Bla bla bla
+    int  bar  =  1;	// Some comment
+    float  z  =  1.0f;
+    
+    void fun(  int  x,
+      float  baz ) // Won't be properly aligned
+    {
+        int  foo  =  1;  // Some description
+        string  sausage  =  "a test string";  // Bla bla bla
+        int  bar  =  1;	// Some comment
+        float  z  =  1.0f;
+    }
+}
+
+// May not work as expected:
+if done:  // Comment
+    code   // Some code
+    more_code  // A comment
+    return  // Align 'return' or the comment or none?
