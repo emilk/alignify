@@ -93,7 +93,7 @@ def tokenize(s):
 						i += 1
 						break
 					else:
-						u += 1
+						i += 1
 			elif c == '-' and s[i+1] == '-':
 				# -- one line Lua comment
 				i = n
