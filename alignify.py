@@ -1,13 +1,13 @@
 #!/usr/bin/python
-# 
+#
 # Last edited 2013-08-23
 # Made by Emil Ernerfeldt (emil ernerfeldt at gmail dot com)
 # https://github.com/emilk/alignify
 # Feel free to use, abuse, modify, redistribute.
-# 
+#
 # Usage:  cat test.txt | python alignify_cli.py
 # Or:     python alignify_cli.py test.txt
-# 
+#
 # Or import and use as a python module
 #
 # Or use in Sublime Text 3:
@@ -114,7 +114,7 @@ def alignify_beg_end(indents, lines):
 	Each line is tokenized.
 	'''
 	assert( len(indents) == len(lines) )
-	
+
 	if len(lines) == 0:
 		return ''
 
@@ -163,7 +163,7 @@ def align(begs, tokens, ends):
 
 	# Append padded tokens onto 'begs' to produce 'new_begs':
 	new_begs   = []
-	
+
 	for ix, beg in enumerate(begs):
 		token = tokens[ix]
 		while len(token) < widest + 1:
@@ -171,7 +171,7 @@ def align(begs, tokens, ends):
 		new_begs.append(begs[ix] + token)
 
 	spam('new_begs: ', new_begs)
-	
+
 	return alignify_beg_end(new_begs, ends)
 
 
@@ -212,72 +212,7 @@ if module_exists('sublime_plugin'):
 		def run(self, edit):
 			for region in self.view.sel():
 				if not region.empty():
+					region = self.view.line(region) # Extend selection to full lines
 					s = self.view.substr(region)
 					s = alignify_string(s)
-					self.view.replace(edit, region, s)  
-
-
-
-
-
-
-
-
-
-
-
-
-# --------------------------------------
-# Debug code:
-
-
-
-
-#tokens = tokenize("if s = 'a string' -- comment")
-#spam(tokens)
-
-if False:
-	examples = [
-	'''
-// Madonna has two trailing spaces:
-First name  Last name
-John  Lennon
-Madonna  
-Marilyn  Monroe
-	'''
-
-	'''
-		a b c
-		aa bb cc
-	''',
-
-	'''
-		void fun(int x, float baz)
-		{
-			int foo = 1;  // Some description
-			string sausage = "a test string";  // Bla bla bla
-			int bar = 1;	// Some comment
-			float z = 1.0f;
-		}
-	''',
-
-	'''
-		output += alignify_beg_end(beg, tokens)
-		beg = []
-		tokens = []
-	'''
-	]
-
-
-	for _,s in enumerate(examples):
-		print( '--------------------------------' )
-		print( 'EXAMPLE INPUT:' )
-		print( s )
-		print( '--------------------------------' )
-		aligned = alignify_string(s)
-		print( '--------------------------------' )
-		print( 'EXAMPLE OUTPUT:' )
-		print( aligned )
-		print( '--------------------------------' )
-		print( '\n\n' )
-		break
+					self.view.replace(edit, region, s)
