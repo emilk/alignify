@@ -1,7 +1,7 @@
 # Alignify
 
 ## What
-Alignify is a python script is designed to take a peice of code and align 'blocks' in that code. An example input is
+Alignify is a python script designed to take a peice of code and align 'blocks' in that code. An example input is
 
 	void fun(int x, float baz)
 	{
@@ -84,8 +84,9 @@ Click OK and you're good to go.
 ## Tips and tricks:
 * To keep a code block "alive", append an empty space on a row ("Madonna  ")
 
+```	
 	First Last
-	Marilyn Monroe
+	Marilyn Monroe    
 	Madonna 
 	John Lennon	
 	
@@ -95,7 +96,7 @@ Click OK and you're good to go.
 	Marilyn Monroe
 	Madonna 
 	John    Lennon
-
+```
 
 ## Future work:
 ### Smart-align
