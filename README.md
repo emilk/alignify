@@ -98,7 +98,23 @@ Click OK and you're good to go.
 	John    Lennon
 ```
 
-## Future work:
+## TODO:
+### Right-align numbers:
+
+	{ "a", 1, 2, 3 }
+    { "beta", 44, 55, 66 }
+
+	Current behavior:
+
+	{ "a",    1,  2,  3  }
+	{ "beta", 44, 55, 66 }
+
+	Wanted behavior:
+
+	{ "a",     1,  2,  3 }
+    { "beta", 44, 55, 66 }
+
+
 ### Smart-align
 Handle empy spaces by matching code blocks to its closest neighbor:
 
