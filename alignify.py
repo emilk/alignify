@@ -16,6 +16,11 @@
 
 import re  # reg-ex
 
+# Options
+
+# If set, will ignore empty lines and will not break on 
+g_continuous = True
+
 
 # For debugging
 def spam(*stuff):
@@ -30,9 +35,10 @@ def alignify_string(s):
 
 def alignify_lines(lines):
 	# Split into blocks of same indentation:
-	beg = []
-	tokens = []
-	last_indent = ''
+	left  = []
+	right = []
+	last_indent = None
+	last_line   = False
 
 	output = ""
 
@@ -43,23 +49,29 @@ def alignify_lines(lines):
 		tabs = m.group(1)
 		meat = m.group(2)
 
-		spam("tabs: '", tabs, "'")
-		spam("meat: '", meat, "'")
+		#spam("tabs: '", tabs, "'")
+		#spam("meat: '", meat, "'")
 
 		# Replace non-leading tabs with spaces. Any number of spaces will work.
 		meat = re.sub(r'\t', '  ', meat)
 
-		if len(beg) > 0 and tabs != last_indent:
-			# A change in indentation - new block
-			output += alignify_beg_end(beg, tokens)
-			beg    =  []
-			tokens =  []
+		if last_indent != None and tabs != last_indent:
+			# A change in indentation
+			if g_continuous and (line == '' or last_line == ''):
+				# single empty line ok
+				pass
+			else:
+				spam("alignify_lines: indentation break: '", tabs, "'")
+				output += align_and_collect(left, right)
+				left  = []
+				right = []
 
-		beg.append( tabs )
-		tokens.append( tokenize(meat) )
+		left.append( tabs )
+		right.append( tokenize(meat) )
 		last_indent = tabs
+		last_line = line
 
-	output += alignify_beg_end(beg, tokens)
+	output += align_and_collect(left, right)
 
 	if len(output) > 0 and output[-1] == '\n':
 		output = output[0:-1]
@@ -69,6 +81,7 @@ def alignify_lines(lines):
 
 def tokenize(s):
 	'''
+	Input: a single line
 	A token is a continuing block of code with no quoted spaces
 	'''
 	tokens = []
@@ -100,6 +113,11 @@ def tokenize(s):
 			elif c == '/' and s[i+1] == '/':
 				# // one line C++ comment
 				i = n
+			elif c == '#' and len(tokens) == 0:
+				# # one line Python comment
+				# We only support these on single line,
+				# else we get confused by Lua # operator
+				i = n
 			else:
 				i += 1
 
@@ -108,71 +126,94 @@ def tokenize(s):
 	return tokens
 
 
-def alignify_beg_end(indents, lines):
-	'''
-	Takes a bunch of lines all with the same indentation.
-	Each line is tokenized.
-	'''
-	assert( len(indents) == len(lines) )
+NONE = False
 
-	if len(lines) == 0:
+
+def align_and_collect(left_in, right_in):
+	'''
+	'left_in' is indentation + already aligned text
+	'right_in' is tokens
+
+	This function will move one token from each line to the left, and call align on those lines
+	'''
+	assert( len(left_in) == len(right_in) )
+
+	n = len(right_in)
+
+	if n == 0:
 		return ''
 
-	spam("alignify_beg_end: ", len(lines))
+	spam("align_and_collect: ", n)
 
-	begs   = []
-	firsts = []
-	ends   = []
+	left_out  = []
+	right_out = []
 
 	output = ''
 
-	for i,line in enumerate(lines):
-		if len(line) == 0:
-			output += align(begs, firsts, ends)
-			output += indents[i] + '\n'
-			begs   = []
-			firsts = []
-			ends   = []
-		elif len(line) == 1:
-			output += align(begs, firsts, ends)
-			output += indents[i] + line[0] + '\n'
-			begs   = []
-			firsts = []
-			ends   = []
+	for i,tokens in enumerate(right_in):
+		if g_continuous:
+			# No breaks!
+			if len(tokens) == 0:
+				left_out.append( left_in[i] )
+				right_out.append( [] )
+			else:
+				left_out.append( left_in[i] + tokens[0] )
+				right_out.append( tokens[1:] )
 		else:
-			begs.append( indents[i] )
-			firsts.append( line[0] )
-			ends.append( line[1:] )
+			if len(tokens) > 1:
+				left_out.append( left_in[i] + tokens[0] )
+				right_out.append( tokens[1:] )
+			else:
+				output += align(left_out, right_out)
+				left_out  = []
+				right_out = []
+				if len(tokens) == 0:
+					output += left_in[i] + '\n'
+				else:
+					output += left_in[i] + tokens[0] + '\n'
 
-	output += align(begs, firsts, ends)
 
-	spam("alignify_beg_end output: ", output)
+	output += align(left_out, right_out)
+
+	#spam("align_and_collect output: ", output)
 	return output
 
 
-def align(begs, tokens, ends):
-	assert(len(begs) == len(tokens))
-	assert(len(begs) == len(ends))
-	if len(begs) == 0:
+def align(left, right):
+	assert(len(left) == len(right))
+	if len(left) == 0:
 		return ''
 
-	spam("align: ", len(tokens))
-	widest = 0
-	for _,t in enumerate(tokens):
-		widest = max(widest, len(t))
+	num_right_tokens = 0	
+	for _,tokens in enumerate(right):
+		if len(tokens) > 0:
+			num_right_tokens += 1
 
-	# Append padded tokens onto 'begs' to produce 'new_begs':
-	new_begs   = []
+	if num_right_tokens == 0:
+		return "\n".join(left) + "\n"
 
-	for ix, beg in enumerate(begs):
-		token = tokens[ix]
-		while len(token) < widest + 1:
-			token += ' '
-		new_begs.append(begs[ix] + token)
+	spam("align: ", len(left))
 
-	spam('new_begs: ', new_begs)
+	# Find widest 'left'
+	widest = -1
+	for ix, txt in enumerate(left):
+		tokens = right[ix]
+		if len(tokens) > 0:
+			widest = max(widest, len(txt))
 
-	return alignify_beg_end(new_begs, ends)
+	# Append padded tokens onto 'left' to produce 'new_left':
+	new_left = []
+
+	for ix, line in enumerate(left):
+		tokens = right[ix]
+		if len(tokens) > 0:
+			while len(line) < widest + 1:
+				line += ' '
+		new_left.append( line )
+
+	spam('new_left: ', new_left)
+
+	return align_and_collect(new_left, right)
 
 
 if __name__ == '__main__':
