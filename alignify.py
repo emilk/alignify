@@ -54,6 +54,7 @@ def alignify_lines(lines):
 
 		# Replace non-leading tabs with spaces. Any number of spaces will work.
 		meat = re.sub(r'\t', '  ', meat)
+		tokens = tokenize(meat)
 
 		if last_indent != None and tabs != last_indent:
 			# A change in indentation
@@ -67,13 +68,13 @@ def alignify_lines(lines):
 				right = []
 
 		left.append( tabs )
-		right.append( tokenize(meat) )
+		right.append( tokens )
 		last_indent = tabs
 		last_line = line
 
 	output += align_and_collect(left, right)
 
-	if len(output) > 0 and output[-1] == '\n':
+	if output.endswith('\n'):
 		output = output[0:-1]
 
 	return output
@@ -126,9 +127,6 @@ def tokenize(s):
 	return tokens
 
 
-NONE = False
-
-
 def align_and_collect(left_in, right_in):
 	'''
 	'left_in' is indentation + already aligned text
@@ -138,40 +136,25 @@ def align_and_collect(left_in, right_in):
 	'''
 	assert( len(left_in) == len(right_in) )
 
-	n = len(right_in)
-
-	if n == 0:
-		return ''
-
-	spam("align_and_collect: ", n)
-
 	left_out  = []
 	right_out = []
 
 	output = ''
 
 	for i,tokens in enumerate(right_in):
-		if g_continuous:
+		if len(tokens) > 0:
+			left_out.append( left_in[i] + tokens[0] )
+			right_out.append( tokens[1:] )
+		elif g_continuous:
 			# No breaks!
-			if len(tokens) == 0:
-				left_out.append( left_in[i] )
-				right_out.append( [] )
-			else:
-				left_out.append( left_in[i] + tokens[0] )
-				right_out.append( tokens[1:] )
+			left_out.append( left_in[i] )
+			right_out.append( [] )
 		else:
-			if len(tokens) > 1:
-				left_out.append( left_in[i] + tokens[0] )
-				right_out.append( tokens[1:] )
-			else:
-				output += align(left_out, right_out)
-				left_out  = []
-				right_out = []
-				if len(tokens) == 0:
-					output += left_in[i] + '\n'
-				else:
-					output += left_in[i] + tokens[0] + '\n'
-
+			# Break on this line
+			output += align(left_out, right_out)
+			left_out  = []
+			right_out = []
+			output += left_in[i] + '\n'
 
 	output += align(left_out, right_out)
 
@@ -184,41 +167,33 @@ def align(left, right):
 	if len(left) == 0:
 		return ''
 
-	num_right_tokens = 0	
-	for _,tokens in enumerate(right):
-		if len(tokens) > 0:
-			num_right_tokens += 1
-
-	if num_right_tokens == 0:
-		return "\n".join(left) + "\n"
-
-	spam("align: ", len(left))
-
-	# Find widest 'left'
+	# Find widest left hand
 	widest = -1
 	for ix, txt in enumerate(left):
 		tokens = right[ix]
 		if len(tokens) > 0:
 			widest = max(widest, len(txt))
 
-	# Append padded tokens onto 'left' to produce 'new_left':
-	new_left = []
+	if widest == -1:
+		# Nothing to align
+		return '\n'.join(left) + '\n'
+
+	spam("align: ", len(left))
+
+	aligned_left = []
 
 	for ix, line in enumerate(left):
 		tokens = right[ix]
 		if len(tokens) > 0:
 			while len(line) < widest + 1:
 				line += ' '
-		new_left.append( line )
+		aligned_left.append( line )
 
-	spam('new_left: ', new_left)
-
-	return align_and_collect(new_left, right)
+	return align_and_collect(aligned_left, right)
 
 
 if __name__ == '__main__':
 	# CLI
-
 	import fileinput  # reads from stdin or from file given as argument
 	import sys
 
