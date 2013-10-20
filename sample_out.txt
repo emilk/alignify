@@ -6,15 +6,14 @@ void fun(int x, float baz)
 	float  z       = 1.0f;
 }
 
-// Madonna has a trailing space:
-First   Last
-Marilyn Monroe
-Madonna 
-John    Lennon
+a  =    1 + 1337
+b  =   42 +   42
+cd = 1337 +    1
 
-
-// Madonna does NOT have a trailing space:
-First   Last
-Marilyn Monroe
-Madonna
-John Lennon
+list = [
+	123
+	 23.45
+	  1
+	  1.2
+	   .1337
+]

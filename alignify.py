@@ -1,6 +1,6 @@
 #!/usr/bin/python
 #
-# Last edited 2013-08-23
+#
 # Made by Emil Ernerfeldt (emil ernerfeldt at gmail dot com)
 # https://github.com/emilk/alignify
 # Feel free to use, abuse, modify, redistribute.
@@ -12,6 +12,11 @@
 #
 # Or use in Sublime Text 3:
 # { "keys": ["super+shift+a"], "command": "alignify" }
+#
+#
+# Changelog:
+# 2.0 - 2013-08-23
+# 2.1 - 2013-10-20  - aligns numbers by decimal point
 
 
 import re  # reg-ex
@@ -83,7 +88,7 @@ def alignify_lines(lines):
 def tokenize(s):
 	'''
 	Input: a single line
-	A token is a continuing block of code with no quoted spaces
+	A token is a continuing block of code with no unquoted spaces
 	'''
 	tokens = []
 	n = len(s)
@@ -136,60 +141,100 @@ def align_and_collect(left_in, right_in):
 	'''
 	assert( len(left_in) == len(right_in) )
 
-	left_out  = []
-	right_out = []
+	next_left   = []
+	next_tokens = []
+	next_right  = []
 
-	output = ''
+	did_append_token = False
 
 	for i,tokens in enumerate(right_in):
 		if len(tokens) > 0:
-			left_out.append( left_in[i] + tokens[0] )
-			right_out.append( tokens[1:] )
+			next_left.append( left_in[i] )
+			next_tokens.append( tokens[0] )
+			next_right.append( tokens[1:] )
+			did_append_token = True
 		elif g_continuous:
 			# No breaks!
-			left_out.append( left_in[i] )
-			right_out.append( [] )
+			next_left.append( left_in[i] )
+			next_tokens.append( None )
+			next_right.append( [] )
 		else:
 			# Break on this line
-			output += align(left_out, right_out)
-			left_out  = []
-			right_out = []
+			output += align(next_left, next_tokens, next_right)
 			output += left_in[i] + '\n'
+			next_left   = []
+			next_tokens = []
+			next_right  = []
 
-	output += align(left_out, right_out)
+	output = ''
+
+	if did_append_token:
+		output = align(next_left, next_tokens, next_right)
+	else:
+		# Done!
+		output = '\n'.join(left_in) + '\n'
 
 	#spam("align_and_collect output: ", output)
 	return output
 
+RE_NUMBER = re.compile(r'^[+-]?\.?\d+.*$')  # any number
+#RE_NUMBER = re.compile(r'^[+-]?\d+.?$')   # integer only, followed by optional delimitor (e.g. comma)
+RE_SIGN_OR_DIGIT = re.compile(r'^[\d+-]$')
 
-def align(left, right):
-	assert(len(left) == len(right))
-	if len(left) == 0:
+
+def spaces(num):
+	return num * ' '
+
+
+def align(left, tokens, right):
+	assert(len(left) == len(right) == len(tokens))
+	n = len(left)
+	if n == 0:
 		return ''
 
-	# Find widest left hand
+	# Find widest token
+	decimal_place = [None] * n
+	rightmost_decimal = 0
 	widest = -1
-	for ix, txt in enumerate(left):
-		tokens = right[ix]
-		if len(tokens) > 0:
-			widest = max(widest, len(txt))
+	for ix, token in enumerate(tokens):
+		if token:
+			more_to_come = (len(right[ix]) > 0)
+			is_number = RE_NUMBER.match(token)
 
-	if widest == -1:
-		# Nothing to align
-		return '\n'.join(left) + '\n'
+			if more_to_come or is_number:
+				widest = max(widest, len(token))
+
+			if is_number:
+				decimal_place[ix] = 0
+				for c in token:
+					if RE_SIGN_OR_DIGIT.match(c):
+						decimal_place[ix] += 1
+					else:
+						break
+				rightmost_decimal = max(rightmost_decimal, decimal_place[ix])
+
 
 	spam("align: ", len(left))
 
-	aligned_left = []
+	new_left = []
 
-	for ix, line in enumerate(left):
-		tokens = right[ix]
-		if len(tokens) > 0:
-			while len(line) < widest + 1:
-				line += ' '
-		aligned_left.append( line )
+	for ix, token in enumerate(tokens):
+		if token:
+			if RE_NUMBER.match(token):
+				# right-align:
+				# token = spaces(widest - len(token)) + token
+				token = spaces(rightmost_decimal - decimal_place[ix]) + token
+			
+			more_to_come = (len(right[ix]) > 0)
 
-	return align_and_collect(aligned_left, right)
+			if more_to_come:
+				token += spaces(1 + widest - len(token))
+
+			new_left.append( left[ix] + token )
+		else:
+			new_left.append( left[ix] )
+
+	return align_and_collect(new_left, right)
 
 
 if __name__ == '__main__':
@@ -232,3 +277,4 @@ if module_exists('sublime_plugin'):
 					s = self.view.substr(region)
 					s = alignify_string(s)
 					self.view.replace(edit, region, s)
+

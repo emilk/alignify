@@ -21,14 +21,14 @@ And output:
 		float  z       = 1.0f;            
 	} 
 
-For a more examples, see sample_in.txt vs sample_out.txt
+For a more examples, see `sample_in.txt` vs `sample_out.txt`
 
 ## Key points:
 * Alignify will align code blocks using spaces
 * Alignify will keep indentation intact
 * The output can be re-alignified (eg. to re-align after a change)
-* Alignify will recognize quoted strings ("double" and 'single')
-* Alignify will recognize //C++ and --Lua comments 
+* Alignify will recognize quoted strings (`"double"` and `'single'`)
+* Alignify will recognize `//C++` and `--Lua` comments 
 
 	    
 ## How to use it
@@ -80,40 +80,8 @@ Click OK and you're good to go.
 ## Caveats
 * Code must be indented with tabs (if at all). If you are indenting with spaces, **STOP IT!** You should always [indent with tabs and align with spaces](http://vim.wikia.com/wiki/Indent_with_tabs,_align_with_spaces).
 
-	    
-## Tips and tricks:
-* To keep a code block "alive", append an empty space on a row ("Madonna  ")
-
-```	
-	First Last
-	Marilyn Monroe    
-	Madonna 
-	John Lennon	
-	
-	  ->
-
-	First   Last
-	Marilyn Monroe
-	Madonna 
-	John    Lennon
-```
 
 ## TODO:
-### Right-align numbers:
-
-	{ "a", 1, 2, 3 }
-    { "beta", 44, 55, 66 }
-
-	Current behavior:
-
-	{ "a",    1,  2,  3  }
-	{ "beta", 44, 55, 66 }
-
-	Wanted behavior:
-
-	{ "a",     1,  2,  3 }
-    { "beta", 44, 55, 66 }
-
 
 ### Smart-align
 Handle empy spaces by matching code blocks to its closest neighbor:
@@ -133,5 +101,4 @@ Handle empy spaces by matching code blocks to its closest neighbor:
 Great! Just clone it and send pull-requests =)
 
 ## Who
-Alignify was created by Emil Ernerfeldt to make code look better.
-It was somewhat inspired by [Nick Gravgaard's Elastic Tabstops](http://nickgravgaard.com/elastictabstops/).
+Alignify was created by Emil Ernerfeldt to make code more readable.
