@@ -1,6 +1,5 @@
 #!/usr/bin/python
 #
-#
 # Made by Emil Ernerfeldt (emil ernerfeldt at gmail dot com)
 # https://github.com/emilk/alignify
 # Feel free to use, abuse, modify, redistribute.
@@ -15,15 +14,15 @@
 #
 #
 # Changelog:
-# 2.0 - 2013-08-23
-# 2.1 - 2013-10-20  - aligns numbers by decimal point
+# 2.0  - 2013-08-23
+# 2.1  - 2013-10-20  - Aligns numbers by decimal point
+# 2.11 - 2013-10-21  - Fixes for number alignment and g_continuous == False
 
 
-import re  # reg-ex
+import re
 
-# Options
 
-# If set, will ignore empty lines and will not break on 
+# If set, will ignore empty lines and will not break on indentation change
 g_continuous = True
 
 
@@ -40,10 +39,10 @@ def alignify_string(s):
 
 def alignify_lines(lines):
 	# Split into blocks of same indentation:
-	left  = []
-	right = []
+	left        = []
+	right       = []
 	last_indent = None
-	last_line   = False
+	last_line   = None
 
 	output = ""
 
@@ -64,7 +63,7 @@ def alignify_lines(lines):
 		if last_indent != None and tabs != last_indent:
 			# A change in indentation
 			if g_continuous and (line == '' or last_line == ''):
-				# single empty line ok
+				# Ignore empty line
 				pass
 			else:
 				spam("alignify_lines: indentation break: '", tabs, "'")
@@ -72,10 +71,10 @@ def alignify_lines(lines):
 				left  = []
 				right = []
 
-		left.append( tabs )
+		left.append(  tabs   )
 		right.append( tokens )
 		last_indent = tabs
-		last_line = line
+		last_line   = line
 
 	output += align_and_collect(left, right)
 
@@ -119,10 +118,10 @@ def tokenize(s):
 			elif c == '/' and s[i+1] == '/':
 				# // one line C++ comment
 				i = n
-			elif c == '#' and len(tokens) == 0:
+			elif c == '#' and (s[i+1] == ' ' or len(tokens) == 0):
 				# # one line Python comment
-				# We only support these on single line,
-				# else we get confused by Lua # operator
+				# We only support these as the only token on a line, or with a space after.
+				# Else we get confused by Lua # operator
 				i = n
 			else:
 				i += 1
@@ -145,14 +144,13 @@ def align_and_collect(left_in, right_in):
 	next_tokens = []
 	next_right  = []
 
-	did_append_token = False
+	output = ''
 
 	for i,tokens in enumerate(right_in):
 		if len(tokens) > 0:
 			next_left.append( left_in[i] )
 			next_tokens.append( tokens[0] )
 			next_right.append( tokens[1:] )
-			did_append_token = True
 		elif g_continuous:
 			# No breaks!
 			next_left.append( left_in[i] )
@@ -166,19 +164,13 @@ def align_and_collect(left_in, right_in):
 			next_tokens = []
 			next_right  = []
 
-	output = ''
-
-	if did_append_token:
-		output = align(next_left, next_tokens, next_right)
-	else:
-		# Done!
-		output = '\n'.join(left_in) + '\n'
+	output += align(next_left, next_tokens, next_right)
 
 	#spam("align_and_collect output: ", output)
 	return output
 
-RE_NUMBER = re.compile(r'^[+-]?\.?\d+.*$')  # any number
-#RE_NUMBER = re.compile(r'^[+-]?\d+.?$')   # integer only, followed by optional delimitor (e.g. comma)
+
+RE_NUMBER = re.compile(r'^[+-]?\.?\d+.*$')  # any number followed by whatever (e.g. a comma)
 RE_SIGN_OR_DIGIT = re.compile(r'^[\d+-]$')
 
 
@@ -192,17 +184,23 @@ def align(left, tokens, right):
 	if n == 0:
 		return ''
 
-	# Find widest token
-	decimal_place = [None] * n
-	rightmost_decimal = 0
-	widest = -1
+	#######################################
+	# Calculate target width:
+
+	decimal_place         = [None] * n
+	rightmost_decimal     = 0
+	right_side_of_decimal = 0      # At most, how many characters right of a decimal point?
+	align_width           = 0
+	need_to_continue      = False
+
 	for ix, token in enumerate(tokens):
 		if token:
+			need_to_continue = True
 			more_to_come = (len(right[ix]) > 0)
 			is_number = RE_NUMBER.match(token)
 
 			if more_to_come or is_number:
-				widest = max(widest, len(token))
+				align_width = max(align_width, len(token) + 1)
 
 			if is_number:
 				decimal_place[ix] = 0
@@ -211,10 +209,17 @@ def align(left, tokens, right):
 						decimal_place[ix] += 1
 					else:
 						break
-				rightmost_decimal = max(rightmost_decimal, decimal_place[ix])
+				spam("Number '%s' has decimal at %i" % (token, decimal_place[ix]))
+				rightmost_decimal     = max(rightmost_decimal,     decimal_place[ix])
+				right_side_of_decimal = max(right_side_of_decimal, 1 + len(token) - decimal_place[ix])
 
+	align_width = max(align_width, rightmost_decimal + right_side_of_decimal)
 
-	spam("align: ", len(left))
+	if not need_to_continue:
+		return '\n'.join(left) + '\n'
+
+	#######################################
+	# Align tokens and move left:
 
 	new_left = []
 
@@ -222,13 +227,12 @@ def align(left, tokens, right):
 		if token:
 			if RE_NUMBER.match(token):
 				# right-align:
-				# token = spaces(widest - len(token)) + token
 				token = spaces(rightmost_decimal - decimal_place[ix]) + token
-			
+
 			more_to_come = (len(right[ix]) > 0)
 
 			if more_to_come:
-				token += spaces(1 + widest - len(token))
+				token += spaces(align_width - len(token))
 
 			new_left.append( left[ix] + token )
 		else:
@@ -277,4 +281,3 @@ if module_exists('sublime_plugin'):
 					s = self.view.substr(region)
 					s = alignify_string(s)
 					self.view.replace(edit, region, s)
-
