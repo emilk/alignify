@@ -15,15 +15,73 @@
 #
 # Changelog:
 # 2.0  - 2013-08-23
-# 2.1  - 2013-10-20  - Aligns numbers by decimal point
-# 2.11 - 2013-10-21  - Fixes for number alignment and g_continuous == False
+# 2.1  - 2013-10-20  -  Aligns numbers by decimal point
+# 2.11 - 2013-10-21  -  Fixes for number alignment and g_continuous == False
+# 2.2  - 2013-10-22  -  Whitespace indentation compatibility
 
 
-import re
+##########################################################################
+# Global settings:
 
+g_ignore_empty_lines = True
+# Iff true, will continue aligning across empty lines.
+# False is recommended for whole-file alignment (though that is not recommended per se).
 
-# If set, will ignore empty lines and will not break on indentation change
 g_continuous = True
+'''
+Iff true, will align 'foo' and 'bar' in:
+
+one foo
+two
+three bar
+'''
+
+g_suffer_whitespace_indentation = True
+'''
+Allow whitespace indentation? The indentation width will be assumed to be an even number.
+Even if you turn this on you can use alignify on code indented with tabs.
+
+If true, algignify can be made to work with code that indents code using spaces.
+Of course, you should never do such a thing. Spaces, as the name implies, is for spacing - not for indentation.
+The only way to reliably tell indentation fro alignment is if one uses different characters for the two - hence the dogma:
+
+	Indent with tabs, align with spaces.
+
+Still - sometimes you are forces to work on a project that uses the wrong indentation style.
+You should of course conform to the coding guidelines, and hence, alignify has a compatibility mode.
+
+Since space-indentation comes with an inherent ambiguity between what's indentation and what's alignment
+enabling the compatibility mode may keep alignify from correctly aligning things like:
+
+rgb = [
+    255,
+     0,
+        0,
+]
+
+Of course, the ambiguity disappears with correctly indented code:
+
+rgb = [
+	255,
+	 0,
+	    0,
+]
+
+And for you with OCD, feast your eyes upon this:
+
+rgb = [
+	255,
+	  0,
+	  0,
+]
+
+Aaaah..........
+'''
+
+##########################################################################
+# Actual code time!
+
+import re  # Our one dependency - regular expressions
 
 
 # For debugging
@@ -49,31 +107,38 @@ def alignify_lines(lines):
 	for ix, line in enumerate(lines):
 		spam("line: '", line, "'")
 
-		m    = re.match("(\t*)(.*)", line)
-		tabs = m.group(1)
-		meat = m.group(2)
+		if g_suffer_whitespace_indentation:
+			# Try mathcing tabs first - if none, match spaces two and two
+			m      = re.match("(\t+|(  )*)(.*)", line)
+			indent = m.group(1)
+			meat   = m.group(3)
+		else:
+			m      = re.match("(\t*)(.*)", line)
+			indent = m.group(1)
+			meat   = m.group(2)
 
-		#spam("tabs: '", tabs, "'")
-		#spam("meat: '", meat, "'")
+		#spam("indent: '", indent, "'")
+		#spam("meat:  '", meat, "'")
 
 		# Replace non-leading tabs with spaces. Any number of spaces will work.
 		meat = re.sub(r'\t', '  ', meat)
 		tokens = tokenize(meat)
 
-		if last_indent != None and tabs != last_indent:
+		if last_indent != None and indent != last_indent:
 			# A change in indentation
-			if g_continuous and (line == '' or last_line == ''):
+			if g_ignore_empty_lines and (line == '' or last_line == ''):
 				# Ignore empty line
 				pass
 			else:
-				spam("alignify_lines: indentation break: '", tabs, "'")
+				# A true change - align what we have so far:
+				spam("alignify_lines: indentation break: '", indent, "'")
 				output += align_and_collect(left, right)
 				left  = []
 				right = []
 
-		left.append(  tabs   )
+		left.append( indent )
 		right.append( tokens )
-		last_indent = tabs
+		last_indent = indent
 		last_line   = line
 
 	output += align_and_collect(left, right)
@@ -241,8 +306,27 @@ def align(left, tokens, right):
 	return align_and_collect(new_left, right)
 
 
-if __name__ == '__main__':
-	# CLI
+def print_help():
+	print( "alignify.py [-t N] [file_name_1, ...]" )
+
+
+def main(argv):
+	'''
+	CLI
+
+	TODO:
+   try:
+		getopt.getopt(argv, "ht:", ["help"])
+	except getopt.GetoptError:
+		print_help()
+		sys.exit(2)
+	for opt, arg in opts:
+		if opt in ("-h", "--help"):
+			print_help()
+			sys.exit()
+		elif opt in ("-t"):
+			g_num_tabs = arg
+	'''
 	import fileinput  # reads from stdin or from file given as argument
 	import sys
 
@@ -253,6 +337,10 @@ if __name__ == '__main__':
 	aligned = alignify_lines(lines)
 	#print( aligned )
 	sys.stdout.write( aligned )  # no trailing newline
+
+
+if __name__ == '__main__':
+   main(sys.argv[1:])  # Skip 'alignify.py' in argv
 
 
 def module_exists(module_name):
