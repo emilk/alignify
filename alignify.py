@@ -17,6 +17,7 @@
 # 2.0  - 2013-08-23
 # 2.1  - 2013-10-20  - Aligns numbers by decimal point
 # 2.11 - 2013-10-21  - Fixes for number alignment and g_continuous == False
+# 2.12 - 2013-10-22  - Fixed tokenizer bug
 
 
 import re
@@ -112,13 +113,13 @@ def tokenize(s):
 						break
 					else:
 						i += 1
-			elif c == '-' and s[i+1] == '-':
+			elif i+1 < n and c == '-' and s[i+1] == '-':
 				# -- one line Lua comment
 				i = n
-			elif c == '/' and s[i+1] == '/':
+			elif i+1 < n and c == '/' and s[i+1] == '/':
 				# // one line C++ comment
 				i = n
-			elif c == '#' and (s[i+1] == ' ' or len(tokens) == 0):
+			elif i+1 < n and c == '#' and (s[i+1] == ' ' or len(tokens) == 0):
 				# # one line Python comment
 				# We only support these as the only token on a line, or with a space after.
 				# Else we get confused by Lua # operator
