@@ -42,6 +42,13 @@ Copy `alignify.py` to `Packages/User` and add the following to your user keymap:
 
 	{ "keys": ["super+shift+a"], "command": "alignify" }
 		
+### From Vim
+Copy `alignify.py` to `~/.vim/alignify.py` and add the following to your .vimrc:
+
+	map <C-A> :!~/.vim/alignify.py<CR>
+
+Open Vim and mark the text you want to align with `V (shift+v)` and then `ctrl+shift+a`
+
 ### As a service (Mac OS X)
 * Create a new script in Automator
 * Drag-drop a "Run Shell Script" (under Library->Utilities)
