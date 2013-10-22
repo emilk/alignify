@@ -316,7 +316,7 @@ def main(argv):
 	CLI
 
 	TODO:
-   try:
+	try:
 		getopt.getopt(argv, "ht:", ["help"])
 	except getopt.GetoptError:
 		print_help()
@@ -341,7 +341,7 @@ def main(argv):
 
 if __name__ == '__main__':
 	import sys
-   main(sys.argv[1:])  # Skip 'alignify.py' in argv
+	main(sys.argv[1:])  # Skip 'alignify.py' in argv
 
 
 def module_exists(module_name):
