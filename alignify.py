@@ -329,7 +329,6 @@ def main(argv):
 			g_num_tabs = arg
 	'''
 	import fileinput  # reads from stdin or from file given as argument
-	import sys
 
 	lines = []
 	for line in fileinput.input():
@@ -341,6 +340,7 @@ def main(argv):
 
 
 if __name__ == '__main__':
+	import sys
    main(sys.argv[1:])  # Skip 'alignify.py' in argv
 
 
