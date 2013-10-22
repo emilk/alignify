@@ -1,47 +1,47 @@
 # Alignify
 
+
 ## What
 Alignify is a python script designed to take a peice of code and align 'blocks' in that code. An example input is
 
-	void fun(int x, float baz)
-	{
-		int foo = 1; // Some description
-		string sausage = "a test string";    // Bla bla bla
-		int bar = 1;    // Some comment
-		float z = 1.0f;
-	}
+	int one = 1; // Duh
+	float pi = 3;   // Or close enough
+	string h2g2 = 42; // ...
 
 And output:
 
-	void fun(int x, float baz) 
-	{    
-		int    foo     = 1;               // Some description 
-		string sausage = "a test string"; // Bla bla bla      
-		int    bar     = 1;               // Some comment     
-		float  z       = 1.0f;            
-	} 
+	int    one  =  1; // Duh
+	float  pi   =  3; // Or close enough
+	string h2g2 = 42; // ...
 
-For a more examples, see `sample_in.txt` vs `sample_out.txt`
+For more examples, see `sample_in.txt` vs `sample_out.txt`
+
+
+## Why
+Code readability matters. Alignify makes it easier to produce clean and readable code.
+
 
 ## Key points:
 * Alignify will align code blocks using spaces
-* Alignify will keep indentation intact
+* Alignify will leave indentation intact (tabs as well as spaces)
 * The output can be re-alignified (eg. to re-align after a change)
 * Alignify will recognize quoted strings (`"double"` and `'single'`)
-* Alignify will recognize `//C++` and `--Lua` comments 
+* Alignify will recognize `//C++` and `--Lua` comments
 
-	    
+
 ## How to use it
+
 ### From a terminal
 
 	cat code.txt | python alignify.py
 	python alignify.py code.txt
-	
+
+
 ### As a Sublime Text 3 plugin
 Copy `alignify.py` to `Packages/User` and add the following to your user keymap:
 
 	{ "keys": ["super+shift+a"], "command": "alignify" }
-		
+
 ### From Vim
 Copy `alignify.py` to `~/.vim/alignify.py` and add the following to your .vimrc:
 
@@ -61,7 +61,8 @@ Open Vim and mark the text you want to align with `V (shift+v)` and then `ctrl+s
 * ??????
 * PROFIT!
 
-### In Qt Creator (windows)
+
+### In Qt Creator (Windows)
 
 * Choose Tools->External->Configure... from the main menu.
 * Select 'Text' in the tree-view and klick the Add-button and choose 'Add Tool'.
@@ -84,21 +85,17 @@ To bind the tool to a keyboard shortcut:
 Click OK and you're good to go.
 
 
-## Caveats
-* Code must be indented with tabs (if at all). If you are indenting with spaces, **STOP IT!** You should always [indent with tabs and align with spaces](http://vim.wikia.com/wiki/Indent_with_tabs,_align_with_spaces).
-
-
 ## TODO:
 
 ### Smart-align
-Handle empy spaces by matching code blocks to its closest neighbor:
+Handle gaps by matching code blocks to their closest neighbor:
 
 	foo      bar   baz
 	foobar           raboof
 	badger  snake   mushroom
-	
+
 	  ->
-	
+
 	foo     bar     baz
 	foobar          raboof
 	badger  snake   mushroom
@@ -106,6 +103,3 @@ Handle empy spaces by matching code blocks to its closest neighbor:
 
 ## I want to help
 Great! Just clone it and send pull-requests =)
-
-## Who
-Alignify was created by Emil Ernerfeldt to make code more readable.

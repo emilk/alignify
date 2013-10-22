@@ -46,7 +46,7 @@ If true, algignify can be made to work with code that indents code using spaces.
 Of course, you should never do such a thing. Spaces, as the name implies, is for spacing - not for indentation.
 The only way to reliably tell indentation fro alignment is if one uses different characters for the two - hence the dogma:
 
-	Indent with tabs, align with spaces.
+	Indent with tabs, align with spaces  -  http://vim.wikia.com/wiki/Indent_with_tabs,_align_with_spaces
 
 Still - sometimes you are forces to work on a project that uses the wrong indentation style.
 You should of course conform to the coding guidelines, and hence, alignify has a compatibility mode.

@@ -1,12 +1,8 @@
 # Run in non-breaking mode or each block on its own
 
-void fun(int x, float baz)
-{
-	int foo = 1; // Some description
-	string sausage = "a test string";    // Bla bla bla
-	int bar = 1;    // Some comment
-	float z = 1.0f;
-}
+int one = 1; // Duh
+float pi = 3;   // Or close enough
+string h2g2 = 42; // ...
 
 red = { 255, 0, 0 }
 green = { 0, 255, 0 }
