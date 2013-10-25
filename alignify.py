@@ -19,6 +19,7 @@
 # 2.11 - 2013-10-21  -  Fixes for number alignment and g_continuous == False
 # 2.12 - 2013-10-22  -  Fixed tokenizer bug
 # 2.2  - 2013-10-22  -  Whitespace indentation compatibility
+# 2.21 - 2013-10-25  -  Fixed issue with failure to detect indentation change
 
 
 ##########################################################################
@@ -101,12 +102,16 @@ def alignify_lines(lines):
 	left        = []
 	right       = []
 	last_indent = None
-	last_line   = None
 
 	output = ""
 
 	for ix, line in enumerate(lines):
 		spam("line: '", line, "'")
+
+		if g_ignore_empty_lines and line == '':
+			left.append( '' )
+			right.append( '' )
+			continue
 
 		if g_suffer_whitespace_indentation:
 			# Try mathcing tabs first - if none, match spaces two and two
@@ -126,21 +131,15 @@ def alignify_lines(lines):
 		tokens = tokenize(meat)
 
 		if last_indent != None and indent != last_indent:
-			# A change in indentation
-			if g_ignore_empty_lines and (line == '' or last_line == ''):
-				# Ignore empty line
-				pass
-			else:
-				# A true change - align what we have so far:
-				spam("alignify_lines: indentation break: '", indent, "'")
-				output += align_and_collect(left, right)
-				left  = []
-				right = []
+			# A change in indentation - align what we have so far:
+			spam("alignify_lines: indentation break: '", indent, "'")
+			output += align_and_collect(left, right)
+			left  = []
+			right = []
 
 		left.append( indent )
 		right.append( tokens )
 		last_indent = indent
-		last_line   = line
 
 	output += align_and_collect(left, right)
 
