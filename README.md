@@ -5,13 +5,13 @@
 Alignify is a python script designed to take a peice of code and align 'blocks' in that code. An example input is
 
 	int one = 1; // Duh
-	float pi = 3;   // Or close enough
+	float pi = 3;   // Close enough.
 	string h2g2 = 42; // ...
 
 And output:
 
 	int    one  =  1; // Duh
-	float  pi   =  3; // Or close enough
+	float  pi   =  3; // Close enough.
 	string h2g2 = 42; // ...
 
 For more examples, see `sample_in.txt` vs `sample_out.txt`

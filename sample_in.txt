@@ -1,7 +1,7 @@
 # Run in non-breaking mode or each block on its own
 
 int one = 1; // Duh
-float pi = 3;   // Or close enough
+float pi = 3;   // Close enough.
 string h2g2 = 42; // ...
 
 red = { 255, 0, 0 }
@@ -17,7 +17,7 @@ cd = 1337 + 1
 	23.45 |
 	1 |
 	1.2 |
-	.1337 |
+	.1337       |
 ]
 
 rgb = [
