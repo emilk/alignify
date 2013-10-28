@@ -14,12 +14,13 @@
 #
 #
 # Changelog:
-# 2.0  - 2013-08-23
-# 2.1  - 2013-10-20  -  Aligns numbers by decimal point
-# 2.11 - 2013-10-21  -  Fixes for number alignment and g_continuous == False
-# 2.12 - 2013-10-22  -  Fixed tokenizer bug
-# 2.2  - 2013-10-22  -  Whitespace indentation compatibility
-# 2.21 - 2013-10-25  -  Fixed issue with failure to detect indentation change
+# 2.0   - 2013-08-23
+# 2.1   - 2013-10-20  -  Aligns numbers by decimal point
+# 2.1.1 - 2013-10-21  -  Fixes for number alignment and g_continuous == False
+# 2.1.2 - 2013-10-22  -  Fixed tokenizer bug
+# 2.2   - 2013-10-22  -  Whitespace indentation compatibility
+# 2.2.1 - 2013-10-25  -  Fixed issue with failure to detect indentation change
+# 2.3   - 2013-10-28  -  Forced spacing after ({, and before )}
 
 
 ##########################################################################
@@ -57,7 +58,7 @@ enabling the compatibility mode may keep alignify from correctly aligning things
 
 rgb = [
     255,
-     0,
+    50,
         0,
 ]
 
@@ -65,19 +66,18 @@ Of course, the ambiguity disappears with correctly indented code:
 
 rgb = [
 	255,
-	 0,
+	50,
 	    0,
 ]
 
-And for you with OCD, feast your eyes upon this:
+which is correctly aligned as:
 
 rgb = [
 	255,
-	  0,
+	 50,
 	  0,
 ]
 
-Aaaah..........
 '''
 
 ##########################################################################
@@ -154,9 +154,14 @@ def tokenize(s):
 	Input: a single line
 	A token is a continuing block of code with no unquoted spaces
 	'''
+
+	SPACE_AFTER  = "({,"
+	SPACE_BEFORE = ")}"
+
 	tokens = []
 	n = len(s)
 	i = 0
+
 	while i < n:
 		# Skip spaces:
 		while i < n and s[i] == ' ':
@@ -188,10 +193,20 @@ def tokenize(s):
 				# We only support these as the only token on a line, or with a space after.
 				# Else we get confused by Lua # operator
 				i = n
+			elif c in SPACE_BEFORE:
+				if start != i:
+					tokens.append( s[start:i] )
+				start = i
+				i += 1
+			elif c in SPACE_AFTER:
+				tokens.append( s[start:i+1] )
+				i += 1
+				start = i
 			else:
 				i += 1
 
-		tokens.append( s[start:i] )
+		if start != i:
+			tokens.append( s[start:i] )
 
 	return tokens
 
@@ -235,8 +250,8 @@ def align_and_collect(left_in, right_in):
 	return output
 
 
-RE_NUMBER = re.compile(r'^[+-]?\.?\d+.*$')  # any number followed by whatever (e.g. a comma)
-RE_SIGN_OR_DIGIT = re.compile(r'^[\d+-]$')
+RE_NUMBER        = re.compile( r'^[+-]?\.?\d+.*$' ) # any number followed by whatever (e.g. a comma)
+RE_SIGN_OR_DIGIT = re.compile( r'^[\d+-]$'        )
 
 
 def spaces(num):
@@ -366,6 +381,7 @@ if module_exists('sublime_plugin'):
 			for region in self.view.sel():
 				if not region.empty():
 					region = self.view.line(region) # Extend selection to full lines
-					s = self.view.substr(region)
-					s = alignify_string(s)
-					self.view.replace(edit, region, s)
+					original = self.view.substr(region)
+					aligned = alignify_string(original)
+					if aligned != original:
+						self.view.replace(edit, region, aligned)
