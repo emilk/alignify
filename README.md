@@ -2,7 +2,7 @@
 
 
 ## What
-Alignify is a python script designed to take a peice of code and align 'blocks' in that code. An example input is
+Alignify is a python script designed to take a piece of code and align 'blocks' in that code. An example input is
 
 	int one = 1; // Duh
 	float pi = 3;   // Close enough.
