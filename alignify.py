@@ -21,9 +21,10 @@
 # 2.2   - 2013-10-22  -  Whitespace indentation compatibility
 # 2.2.1 - 2013-10-25  -  Fixed issue with failure to detect indentation change
 # 2.3   - 2013-10-28  -  Forced spacing after ({, and before )}
+# 3.0   - 2014-06-26  -  Proper AST parsing for handling ({[]})-scopes separately
 
 
-##########################################################################
+# -----------------------------------------------------------
 # Global settings:
 
 g_ignore_empty_lines = True
@@ -53,8 +54,8 @@ The only way to reliably tell indentation fro alignment is if one uses different
 Still - sometimes you are forces to work on a project that uses the wrong indentation style.
 You should of course conform to the coding guidelines, and hence, alignify has a compatibility mode.
 
-Since space-indentation comes with an inherent ambiguity between what's indentation and what's alignment
-enabling the compatibility mode may keep alignify from correctly aligning things like:
+Since space-indentation comes with an inherent ambiguity between what's indentation and what's alignment.
+Enabling the compatibility mode may keep alignify from correctly aligning things like:
 
 rgb = [
     255,
@@ -80,7 +81,7 @@ rgb = [
 
 '''
 
-##########################################################################
+# -----------------------------------------------------------
 # Actual code time!
 
 import re  # Our one dependency - regular expressions
@@ -128,7 +129,8 @@ def alignify_lines(lines):
 
 		# Replace non-leading tabs with spaces. Any number of spaces will work.
 		meat = re.sub(r'\t', '  ', meat)
-		tokens = tokenize(meat)
+		nodes, _ = parse(meat)
+		assert(type(nodes) is list)
 
 		if last_indent != None and indent != last_indent:
 			# A change in indentation - align what we have so far:
@@ -138,7 +140,7 @@ def alignify_lines(lines):
 			right = []
 
 		left.append( indent )
-		right.append( tokens )
+		right.append( nodes )
 		last_indent = indent
 
 	output += align_and_collect(left, right)
@@ -149,18 +151,24 @@ def alignify_lines(lines):
 	return output
 
 
-def tokenize(s):
+# Recursive decent - breaks at end or reaching 'until'
+# Returns an AST. Each node is either a string or a list.
+def parse(s, i = 0, until = None):
 	'''
 	Input: a single line
 	A token is a continuing block of code with no unquoted spaces
 	'''
 
-	SPACE_AFTER  = "({,"
 	SPACE_BEFORE = ")}"
+	SPACE_AFTER  = "({,"
+	NESTINGS = {
+		'{': '}',
+		'(': ')',
+		'[': ']',
+	}
 
-	tokens = []
+	nodes = []
 	n = len(s)
-	i = 0
 
 	while i < n:
 		# Skip spaces:
@@ -171,6 +179,11 @@ def tokenize(s):
 
 		while i < n and s[i] != ' ':
 			c = s[i]
+
+			if c == until:
+				if start != i:
+					nodes.append( s[start:i] )
+				return nodes, i
 
 			if c == "'" or c == '"':
 				i += 1
@@ -188,66 +201,105 @@ def tokenize(s):
 			elif i+1 < n and c == '/' and s[i+1] == '/':
 				# // one line C++ comment
 				i = n
-			elif i+1 < n and c == '#' and (s[i+1] == ' ' or len(tokens) == 0):
+			elif i+1 < n and c == '#' and (s[i+1] == ' ' or len(nodes) == 0):
 				# # one line Python comment
 				# We only support these as the only token on a line, or with a space after.
 				# Else we get confused by Lua # operator
 				i = n
+			elif c in NESTINGS:
+				# eg:  foo(
+				opener = s[start:i+1]
+				nested, i = parse(s, i+1, NESTINGS[c])
+				assert(type(nested) is list)
+				closer = s[i:i+1]
+				nested.insert( 0, opener )
+				nested.append( closer )
+				nodes.append( nested )
+				i += 1
+				start = i
+
 			elif c in SPACE_BEFORE:
 				if start != i:
-					tokens.append( s[start:i] )
+					nodes.append( s[start:i] )
 				start = i
 				i += 1
 			elif c in SPACE_AFTER:
-				tokens.append( s[start:i+1] )
+				nodes.append( s[start:i+1] )
 				i += 1
 				start = i
 			else:
 				i += 1
 
 		if start != i:
-			tokens.append( s[start:i] )
+			nodes.append( s[start:i] )
 
-	return tokens
+	spam("parse: ", s, " -> ", nodes)
+
+	return nodes, i
 
 
 def align_and_collect(left_in, right_in):
-	'''
-	'left_in' is indentation + already aligned text
-	'right_in' is tokens
+	assert(len(left_in) == len(right_in))
+	n = len(left_in)
+	spam("align_and_collect ", n, ": ", right_in)
 
-	This function will move one token from each line to the left, and call align on those lines
-	'''
-	assert( len(left_in) == len(right_in) )
+	right_out = align_nodes(right_in)
+	out = [None] * n
+	for ix, line in enumerate(right_out):
+		out[ix] = left_in[ix] + right_out[ix].rstrip()
+	return '\n'.join(out) + '\n'
 
-	next_left   = []
-	next_tokens = []
-	next_right  = []
 
-	output = ''
+def align_nodes(lines):
+	if len(lines) == 0:
+		return []
 
-	for i,tokens in enumerate(right_in):
-		if len(tokens) > 0:
-			next_left.append( left_in[i] )
-			next_tokens.append( tokens[0] )
-			next_right.append( tokens[1:] )
-		elif g_continuous:
-			# No breaks!
-			next_left.append( left_in[i] )
-			next_tokens.append( None )
-			next_right.append( [] )
+	spam("align_nodes ", len(lines), ": ", lines)
+
+	string_lines  = []
+	strings       = []
+	strings_right = []
+
+	list_lines   = []
+	lists        = []
+	lists_right  = []
+
+	empty_lines  = []
+
+	for line_nr,nodes in enumerate(lines):
+		if len(nodes) > 0:
+			first = nodes[0]
+			if type(first) is str:
+				string_lines.append(line_nr)
+				strings.append(first)
+				strings_right.append(nodes[1:])
+			else:
+				assert(type(first) is list)
+				list_lines.append(line_nr)
+				lists.append(first)
+				lists_right.append(nodes[1:])
 		else:
-			# Break on this line
-			output += align(next_left, next_tokens, next_right)
-			output += left_in[i] + '\n'
-			next_left   = []
-			next_tokens = []
-			next_right  = []
+			# A break - ignore it
+			empty_lines.append(line_nr)
 
-	output += align(next_left, next_tokens, next_right)
+	spam("aling_strings( strings       )")
+	strings_out_left  = aling_strings( strings       )
+	spam("align_nodes(   strings_right )")
+	strings_out_right = align_nodes(   strings_right )
+	spam("align_nodes(   lists         )")
+	lists_out_left    = align_nodes(   lists         )
+	spam("align_nodes(   lists_right   )")
+	lists_out_right   = align_nodes(   lists_right   )
 
-	#spam("align_and_collect output: ", output)
-	return output
+	out_lines = [''] * len(lines)
+
+	for ix,line_nr in enumerate(string_lines):
+		out_lines[line_nr] = strings_out_left[ix] + strings_out_right[ix]
+	for ix,line_nr in enumerate(list_lines):
+		out_lines[line_nr] = lists_out_left[ix] + lists_out_right[ix]
+
+	spam("align_nodes: ", lines, " -> ", out_lines)
+	return out_lines
 
 
 RE_NUMBER        = re.compile( r'^[+-]?\.?\d+.*$' ) # any number followed by whatever (e.g. a comma)
@@ -257,68 +309,58 @@ RE_SIGN_OR_DIGIT = re.compile( r'^[\d+-]$'        )
 def spaces(num):
 	return num * ' '
 
-
-def align(left, tokens, right):
-	assert(len(left) == len(right) == len(tokens))
-	n = len(left)
+# lines = list of single tokens == list of stirngs
+def aling_strings(lines):
+	n = len(lines)
 	if n == 0:
-		return ''
+		return []
 
-	#######################################
+	spam("aling_strings: ", len(lines))
+
+	# -----------------------------------------------------------
 	# Calculate target width:
 
 	decimal_place         = [None] * n
 	rightmost_decimal     = 0
-	right_side_of_decimal = 0      # At most, how many characters right of a decimal point?
+	right_side_of_decimal = 0  # At most, how many characters right of a decimal point?
 	align_width           = 0
-	need_to_continue      = False
 
-	for ix, token in enumerate(tokens):
-		if token:
-			need_to_continue = True
-			more_to_come = (len(right[ix]) > 0)
-			is_number = RE_NUMBER.match(token)
+	for ix, token in enumerate(lines):
+		is_number = RE_NUMBER.match(token)
 
-			if more_to_come or is_number:
-				align_width = max(align_width, len(token) + 1)
+		align_width = max(align_width, len(token))
 
-			if is_number:
-				decimal_place[ix] = 0
-				for c in token:
-					if RE_SIGN_OR_DIGIT.match(c):
-						decimal_place[ix] += 1
-					else:
-						break
-				spam("Number '%s' has decimal at %i" % (token, decimal_place[ix]))
-				rightmost_decimal     = max(rightmost_decimal,     decimal_place[ix])
-				right_side_of_decimal = max(right_side_of_decimal, 1 + len(token) - decimal_place[ix])
+		if is_number:
+			decimal_place[ix] = 0
+			for c in token:
+				if RE_SIGN_OR_DIGIT.match(c):
+					decimal_place[ix] += 1
+				else:
+					break
+			spam("Number '%s' has decimal at %i" % (token, decimal_place[ix]))
+			rightmost_decimal     = max(rightmost_decimal,     decimal_place[ix])
+			right_side_of_decimal = max(right_side_of_decimal, len(token) - decimal_place[ix])
 
+	spam("align_width: ", align_width)
+	spam("rightmost_decimal: ", rightmost_decimal)
+	spam("right_side_of_decimal: ", right_side_of_decimal)
 	align_width = max(align_width, rightmost_decimal + right_side_of_decimal)
 
-	if not need_to_continue:
-		return '\n'.join(left) + '\n'
+	# -----------------------------------------------------------
+	# Do the actual aligning:
 
-	#######################################
-	# Align tokens and move left:
+	aligned_lines = []
 
-	new_left = []
+	for ix, token in enumerate(lines):
+		if decimal_place[ix] != None:
+			# right-align number:
+			token = spaces(rightmost_decimal - decimal_place[ix]) + token
 
-	for ix, token in enumerate(tokens):
-		if token:
-			if RE_NUMBER.match(token):
-				# right-align:
-				token = spaces(rightmost_decimal - decimal_place[ix]) + token
+		token += spaces(1 + align_width - len(token)) # +1: we want at least one!
+		aligned_lines.append( token )
 
-			more_to_come = (len(right[ix]) > 0)
-
-			if more_to_come:
-				token += spaces(align_width - len(token))
-
-			new_left.append( left[ix] + token )
-		else:
-			new_left.append( left[ix] )
-
-	return align_and_collect(new_left, right)
+	spam("aling_strings: ", lines, " => ", aligned_lines)
+	return aligned_lines
 
 
 def print_help():
