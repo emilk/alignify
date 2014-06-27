@@ -21,7 +21,10 @@
 # 2.2   - 2013-10-22  -  Whitespace indentation compatibility
 # 2.2.1 - 2013-10-25  -  Fixed issue with failure to detect indentation change
 # 2.3   - 2013-10-28  -  Forced spacing after ({, and before )}
+# 2.3.1 - 2013-12-12  -  Fixed issue with some # detected as python comments when they where not
 # 3.0   - 2014-06-26  -  Proper AST parsing for handling ({[]})-scopes separately
+# 3.01  - 2014-06-27  -  Disabled AST:ing of () and []
+# 3.02  - 2014-06-27  -  Fixed issue with splitting }; into separate tokens
 
 
 # -----------------------------------------------------------
@@ -151,7 +154,7 @@ def alignify_lines(lines):
 	return output
 
 
-# Recursive decent - breaks at end or reaching 'until'
+# Recursive decent - breaks at end or reaching when pushing a string node starting with character 'until'.
 # Returns an AST. Each node is either a string or a list.
 def parse(s, i = 0, until = None):
 	'''
@@ -159,12 +162,12 @@ def parse(s, i = 0, until = None):
 	A token is a continuing block of code with no unquoted spaces
 	'''
 
-	SPACE_BEFORE = ")}"
-	SPACE_AFTER  = "({,"
+	SPACE_BEFORE = "}"
+	SPACE_AFTER  = "{,"
 	NESTINGS = {
 		'{': '}',
-		'(': ')',
-		'[': ']',
+		#'(': ')',
+		#'[': ']',
 	}
 
 	nodes = []
@@ -179,11 +182,6 @@ def parse(s, i = 0, until = None):
 
 		while i < n and s[i] != ' ':
 			c = s[i]
-
-			if c == until:
-				if start != i:
-					nodes.append( s[start:i] )
-				return nodes, i
 
 			if c == "'" or c == '"':
 				i += 1
@@ -201,19 +199,16 @@ def parse(s, i = 0, until = None):
 			elif i+1 < n and c == '/' and s[i+1] == '/':
 				# // one line C++ comment
 				i = n
-			elif i+1 < n and c == '#' and (s[i+1] == ' ' or len(nodes) == 0):
+			elif i+1 < n and c == '#' and s[i+1] == ' ':
 				# # one line Python comment
-				# We only support these as the only token on a line, or with a space after.
+				# We only support these with a space after.
 				# Else we get confused by Lua # operator
 				i = n
 			elif c in NESTINGS:
 				# eg:  foo(
 				opener = s[start:i+1]
 				nested, i = parse(s, i+1, NESTINGS[c])
-				assert(type(nested) is list)
-				closer = s[i:i+1]
 				nested.insert( 0, opener )
-				nested.append( closer )
 				nodes.append( nested )
 				i += 1
 				start = i
@@ -221,10 +216,14 @@ def parse(s, i = 0, until = None):
 			elif c in SPACE_BEFORE:
 				if start != i:
 					nodes.append( s[start:i] )
+					if nodes[-1][0] == until:
+						return nodes,i
 				start = i
 				i += 1
 			elif c in SPACE_AFTER:
 				nodes.append( s[start:i+1] )
+				if nodes[-1][0] == until:
+					return nodes,i
 				i += 1
 				start = i
 			else:
@@ -232,6 +231,8 @@ def parse(s, i = 0, until = None):
 
 		if start != i:
 			nodes.append( s[start:i] )
+			if nodes[-1][0] == until:
+				return nodes,i
 
 	spam("parse: ", s, " -> ", nodes)
 
@@ -260,11 +261,11 @@ def align_nodes(lines):
 	strings       = []
 	strings_right = []
 
-	list_lines   = []
-	lists        = []
-	lists_right  = []
+	list_lines    = []
+	lists         = []
+	lists_right   = []
 
-	empty_lines  = []
+	empty_lines   = []
 
 	for line_nr,nodes in enumerate(lines):
 		if len(nodes) > 0:
