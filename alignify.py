@@ -25,6 +25,7 @@
 # 3.0   - 2014-06-26  -  Proper AST parsing for handling ({[]})-scopes separately
 # 3.01  - 2014-06-27  -  Disabled AST:ing of () and []
 # 3.02  - 2014-06-27  -  Fixed issue with splitting }; into separate tokens
+# 3.03  - 2014-06-27  -  Fixed issue with aligning to last token on a line
 
 
 # -----------------------------------------------------------
@@ -257,23 +258,23 @@ def align_nodes(lines):
 
 	spam("align_nodes ", len(lines), ": ", lines)
 
-	string_lines  = []
-	strings       = []
-	strings_right = []
+	token_lines  = []
+	tokens       = []
+	tokens_right = []
 
-	list_lines    = []
-	lists         = []
-	lists_right   = []
+	list_lines   = []
+	lists        = []
+	lists_right  = []
 
-	empty_lines   = []
+	empty_lines  = []
 
 	for line_nr,nodes in enumerate(lines):
 		if len(nodes) > 0:
 			first = nodes[0]
 			if type(first) is str:
-				string_lines.append(line_nr)
-				strings.append(first)
-				strings_right.append(nodes[1:])
+				token_lines.append(line_nr)
+				tokens.append(first)
+				tokens_right.append(nodes[1:])
 			else:
 				assert(type(first) is list)
 				list_lines.append(line_nr)
@@ -283,19 +284,15 @@ def align_nodes(lines):
 			# A break - ignore it
 			empty_lines.append(line_nr)
 
-	spam("aling_strings( strings       )")
-	strings_out_left  = aling_strings( strings       )
-	spam("align_nodes(   strings_right )")
-	strings_out_right = align_nodes(   strings_right )
-	spam("align_nodes(   lists         )")
-	lists_out_left    = align_nodes(   lists         )
-	spam("align_nodes(   lists_right   )")
-	lists_out_right   = align_nodes(   lists_right   )
+	tokens_out_left  = aling_tokens( tokens,      tokens_right )
+	tokens_out_right = align_nodes(  tokens_right )
+	lists_out_left   = align_nodes(  lists        )
+	lists_out_right  = align_nodes(  lists_right  )
 
 	out_lines = [''] * len(lines)
 
-	for ix,line_nr in enumerate(string_lines):
-		out_lines[line_nr] = strings_out_left[ix] + strings_out_right[ix]
+	for ix,line_nr in enumerate(token_lines):
+		out_lines[line_nr] = tokens_out_left[ix] + tokens_out_right[ix]
 	for ix,line_nr in enumerate(list_lines):
 		out_lines[line_nr] = lists_out_left[ix] + lists_out_right[ix]
 
@@ -311,12 +308,12 @@ def spaces(num):
 	return num * ' '
 
 # lines = list of single tokens == list of stirngs
-def aling_strings(lines):
+def aling_tokens(lines, right):
 	n = len(lines)
 	if n == 0:
 		return []
 
-	spam("aling_strings: ", len(lines))
+	spam("aling_tokens: ", len(lines))
 
 	# -----------------------------------------------------------
 	# Calculate target width:
@@ -328,8 +325,10 @@ def aling_strings(lines):
 
 	for ix, token in enumerate(lines):
 		is_number = RE_NUMBER.match(token)
+		more_to_come = (len(right[ix]) > 0)
 
-		align_width = max(align_width, len(token))
+		if more_to_come:
+			align_width = max(align_width, len(token))
 
 		if is_number:
 			decimal_place[ix] = 0
@@ -342,9 +341,6 @@ def aling_strings(lines):
 			rightmost_decimal     = max(rightmost_decimal,     decimal_place[ix])
 			right_side_of_decimal = max(right_side_of_decimal, len(token) - decimal_place[ix])
 
-	spam("align_width: ", align_width)
-	spam("rightmost_decimal: ", rightmost_decimal)
-	spam("right_side_of_decimal: ", right_side_of_decimal)
 	align_width = max(align_width, rightmost_decimal + right_side_of_decimal)
 
 	# -----------------------------------------------------------
@@ -360,7 +356,7 @@ def aling_strings(lines):
 		token += spaces(1 + align_width - len(token)) # +1: we want at least one!
 		aligned_lines.append( token )
 
-	spam("aling_strings: ", lines, " => ", aligned_lines)
+	spam("aling_tokens: ", lines, " => ", aligned_lines)
 	return aligned_lines
 
 
