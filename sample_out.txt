@@ -27,3 +27,7 @@ rgb = [
 	  0,
 	  0,
 ]
+
+
+( enemy,                  season,                  deaths,             kills,             accidentals,             shots )
+( { $row['last_enemy'] }, { $row['last_season'] }, { $row['deaths'] }, { $row['kills'] }, { $row['accidentals'] }, { $row['shots'] })

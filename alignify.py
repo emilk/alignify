@@ -26,6 +26,7 @@
 # 3.01  - 2014-06-27  -  Disabled AST:ing of () and []
 # 3.02  - 2014-06-27  -  Fixed issue with splitting }; into separate tokens
 # 3.03  - 2014-06-27  -  Fixed issue with aligning to last token on a line
+# 3.1   - 2014-07-03  -  {}-nodes now aligned together, then aligned with string-nodes
 
 
 # -----------------------------------------------------------
@@ -258,43 +259,47 @@ def align_nodes(lines):
 
 	spam("align_nodes ", len(lines), ": ", lines)
 
+	# ----------------------------------------------------
+	# Find list nodes and covert to strings:
+
+	list_lines   = []
+	lists        = []
+
+	for line_nr,nodes in enumerate(lines):
+		if len(nodes) > 0 and type(nodes[0]) is list:
+			list_lines.append(line_nr)
+			lists.append(nodes[0])
+
+	lists_as_strings  = align_nodes( lists )
+
+	# ----------------------------------------------------
+	# Replace list nodes with their aligned tokens:
+
+	for ix,line_nr in enumerate(list_lines):
+		lines[line_nr][0] = lists_as_strings[ix]
+
+	# ----------------------------------------------------
+
 	token_lines  = []
 	tokens       = []
 	tokens_right = []
 
-	list_lines   = []
-	lists        = []
-	lists_right  = []
-
-	empty_lines  = []
-
 	for line_nr,nodes in enumerate(lines):
 		if len(nodes) > 0:
-			first = nodes[0]
-			if type(first) is str:
-				token_lines.append(line_nr)
-				tokens.append(first)
-				tokens_right.append(nodes[1:])
-			else:
-				assert(type(first) is list)
-				list_lines.append(line_nr)
-				lists.append(first)
-				lists_right.append(nodes[1:])
-		else:
-			# A break - ignore it
-			empty_lines.append(line_nr)
+			assert(type(nodes[0]) is str)
+			token_lines.append(line_nr)
+			tokens.append(nodes[0])
+			tokens_right.append(nodes[1:])
 
 	tokens_out_left  = aling_tokens( tokens,      tokens_right )
 	tokens_out_right = align_nodes(  tokens_right )
-	lists_out_left   = align_nodes(  lists        )
-	lists_out_right  = align_nodes(  lists_right  )
+
+	# ----------------------------------------------------
 
 	out_lines = [''] * len(lines)
 
 	for ix,line_nr in enumerate(token_lines):
 		out_lines[line_nr] = tokens_out_left[ix] + tokens_out_right[ix]
-	for ix,line_nr in enumerate(list_lines):
-		out_lines[line_nr] = lists_out_left[ix] + lists_out_right[ix]
 
 	spam("align_nodes: ", lines, " -> ", out_lines)
 	return out_lines
@@ -307,7 +312,7 @@ RE_SIGN_OR_DIGIT = re.compile( r'^[\d+-]$'        )
 def spaces(num):
 	return num * ' '
 
-# lines = list of single tokens == list of stirngs
+# lines = list of single tokens == list of strings
 def aling_tokens(lines, right):
 	n = len(lines)
 	if n == 0:
