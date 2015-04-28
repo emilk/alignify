@@ -27,7 +27,7 @@
 # 3.02  - 2014-06-27  -  Fixed issue with splitting }; into separate tokens
 # 3.03  - 2014-06-27  -  Fixed issue with aligning to last token on a line
 # 3.1   - 2014-07-03  -  {}-nodes now aligned together, then aligned with string-nodes
-
+# 3.1.0 - 2015-04-28  -  Switched to semantic versioning
 
 # -----------------------------------------------------------
 # Global settings:
