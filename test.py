@@ -117,6 +117,28 @@ TESTS = [
 			map<int, string> z;
 		"""
 	),
+	(
+		"""
+			map<shared_ptr<Foo>, string> foo;
+			map<double, int> bar;
+			map<unsigned, string> baz;
+			vector<string> badger;
+		""", """
+			map<shared_ptr<Foo>, string> foo;
+			map<double,          int>    bar;
+			map<unsigned,        string> baz;
+			vector<string>               badger;
+		"""
+	),
+	(
+		"""
+			std::map<std::string, unsigned> foo;
+			std::vector<std::string> bar;
+		""", """
+			std::map<std::string, unsigned> foo;
+			std::vector<std::string>        bar;
+		"""
+	),
 ]
 
 def main():
