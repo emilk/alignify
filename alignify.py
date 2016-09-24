@@ -25,9 +25,9 @@
 # 2.3   - 2013-10-28  -  Forced spacing after ({, and before )}
 # 2.3.1 - 2013-12-12  -  Fixed issue with some # detected as python comments when they where not
 # 3.0   - 2014-06-26  -  Proper AST parsing for handling ({[]})-scopes separately
-# 3.01  - 2014-06-27  -  Disabled AST:ing of () and []
-# 3.02  - 2014-06-27  -  Fixed issue with splitting }; into separate tokens
-# 3.03  - 2014-06-27  -  Fixed issue with aligning to last token on a line
+# 3.0.1 - 2014-06-27  -  Disabled AST:ing of () and []
+# 3.0.2 - 2014-06-27  -  Fixed issue with splitting }; into separate tokens
+# 3.0.3 - 2014-06-27  -  Fixed issue with aligning to last token on a line
 # 3.1   - 2014-07-03  -  {}-nodes now aligned together, then aligned with string-nodes
 # 3.1.0 - 2015-04-28  -  Switched to semantic versioning
 
@@ -93,7 +93,6 @@ rgb = [
 
 import re  # Our one dependency - regular expressions
 
-
 # For debugging
 def spam(*stuff):
 	#print( 'SPAM: ' + ''.join(map(str,stuff)) )
@@ -101,8 +100,7 @@ def spam(*stuff):
 
 
 def alignify_string(s):
-	lines = s.split('\n')
-	return alignify_lines( lines )
+	return alignify_lines(s.splitlines())
 
 
 def alignify_lines(lines):
@@ -122,7 +120,7 @@ def alignify_lines(lines):
 			continue
 
 		if g_suffer_whitespace_indentation:
-			# Try mathcing tabs first - if none, match spaces two and two
+			# Try matching tabs first - if none, match spaces two and two
 			m      = re.match("(\t+|(  )*)(.*)", line)
 			indent = m.group(1)
 			meat   = m.group(3)
@@ -262,17 +260,17 @@ def align_nodes(lines):
 	spam("align_nodes ", len(lines), ": ", lines)
 
 	# ----------------------------------------------------
-	# Find list nodes and covert to strings:
+	# Find list nodes and convert to strings:
 
 	list_lines   = []
 	lists        = []
 
-	for line_nr,nodes in enumerate(lines):
+	for line_nr, nodes in enumerate(lines):
 		if len(nodes) > 0 and type(nodes[0]) is list:
 			list_lines.append(line_nr)
 			lists.append(nodes[0])
 
-	lists_as_strings  = align_nodes( lists )
+	lists_as_strings = align_nodes(lists)
 
 	# ----------------------------------------------------
 	# Replace list nodes with their aligned tokens:
@@ -368,40 +366,27 @@ def aling_tokens(lines, right):
 
 
 def print_help():
-	print( "alignify.py [-t N] [file_name_1, ...]" )
+	print("alignify.py [file_name_1, ...],  or:  cat text | alignify.py")
 
 
-def main(argv):
-	'''
-	CLI
-
-	TODO:
-	try:
-		getopt.getopt(argv, "ht:", ["help"])
-	except getopt.GetoptError:
-		print_help()
-		sys.exit(2)
-	for opt, arg in opts:
-		if opt in ("-h", "--help"):
-			print_help()
-			sys.exit()
-		elif opt in ("-t"):
-			g_num_tabs = arg
-	'''
+def main():
+	''' CLI. TODO: parse some flags? '''
 	import fileinput  # reads from stdin or from file given as argument
+	import sys
 
 	lines = []
 	for line in fileinput.input():
 		lines.append(line)
 
-	aligned = alignify_lines(lines)
-	#print( aligned )
-	sys.stdout.write( aligned )  # no trailing newline
+	if len(lines) == 0:
+		print_help()
+	else:
+		aligned = alignify_lines(lines)
+		sys.stdout.write(aligned) # no trailing newline
 
 
 if __name__ == '__main__':
-	import sys
-	main(sys.argv[1:])  # Skip 'alignify.py' in argv
+	main()
 
 
 def module_exists(module_name):
@@ -418,11 +403,6 @@ if module_exists('sublime_plugin'):
 	import sublime_plugin
 
 	class AlignifyCommand(sublime_plugin.TextCommand):
-		'''
-		def __init__(self, view):
-			super(AlignifyCommand, self).__init__(view)
-		'''
-
 		def run(self, edit):
 			for region in self.view.sel():
 				if not region.empty():
