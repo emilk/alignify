@@ -87,21 +87,5 @@ To bind the tool to a keyboard shortcut:
 Click OK and you're good to go.
 
 
-## TODO:
-
-### Smart-align
-Handle gaps by matching code blocks to their closest neighbor:
-
-	foo      bar   baz
-	foobar           raboof
-	badger  snake   mushroom
-
-	  ->
-
-	foo     bar     baz
-	foobar          raboof
-	badger  snake   mushroom
-
-
 ## I want to help
 Great! Just clone it and send pull-requests =)
