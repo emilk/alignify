@@ -307,11 +307,11 @@ def align_and_collect(left_indentation, right_ast_in):
 	return '\n'.join(result) + '\n'
 
 
-def align_nodes(lines):
-	if len(lines) == 0:
+def align_nodes(ast_lines):
+	if len(ast_lines) == 0:
 		return []
 
-	spam("align_nodes ", len(lines), ": ", lines)
+	spam("align_nodes ", len(ast_lines), ": ", ast_lines)
 
 	# ----------------------------------------------------
 	# Find list nodes and convert to strings:
@@ -319,7 +319,7 @@ def align_nodes(lines):
 	list_lines = []
 	lists      = []
 
-	for line_nr, nodes in enumerate(lines):
+	for line_nr, nodes in enumerate(ast_lines):
 		if len(nodes) > 0 and type(nodes[0]) is list:
 			list_lines.append(line_nr)
 			lists.append(nodes[0])
@@ -329,8 +329,10 @@ def align_nodes(lines):
 	# ----------------------------------------------------
 	# Replace list nodes with their aligned tokens:
 
-	for ix,line_nr in enumerate(list_lines):
-		lines[line_nr][0] = lists_as_strings[ix]
+	str_lines = ast_lines
+
+	for ix, line_nr in enumerate(list_lines):
+		str_lines[line_nr][0] = lists_as_strings[ix]
 
 	# ----------------------------------------------------
 
@@ -338,37 +340,39 @@ def align_nodes(lines):
 	tokens       = []
 	tokens_right = []
 
-	for line_nr,nodes in enumerate(lines):
+	for line_nr, nodes in enumerate(str_lines):
 		if len(nodes) > 0:
 			assert(type(nodes[0]) is str)
 			token_lines.append(line_nr)
 			tokens.append(nodes[0])
 			tokens_right.append(nodes[1:])
 
-	tokens_out_left  = align_tokens(tokens, tokens_right)
+	has_more_on_same_line = [len(tokens_right[ix]) > 0 for ix in range(len(tokens_right))]
+
+	tokens_out_left  = align_tokens(tokens, has_more_on_same_line)
 	tokens_out_right = align_nodes(tokens_right)
 
 	# ----------------------------------------------------
 
-	out_lines = [''] * len(lines)
+	out_lines = [''] * len(str_lines)
 
-	for ix,line_nr in enumerate(token_lines):
+	for ix, line_nr in enumerate(token_lines):
 		out_lines[line_nr] = tokens_out_left[ix] + tokens_out_right[ix]
 
-	spam("align_nodes: ", lines, " -> ", out_lines)
+	spam("align_nodes: ", str_lines, " -> ", out_lines)
 	return out_lines
 
 
 def spaces(num):
 	return num * ' '
 
-# lines = list of single tokens == list of strings
-def align_tokens(lines, right):
-	n = len(lines)
+# tokens = list of single tokens == list of strings
+def align_tokens(tokens, has_more_on_same_line):
+	n = len(tokens)
 	if n == 0:
 		return []
 
-	spam("align_tokens: ", len(lines))
+	spam("align_tokens: ", len(tokens))
 
 	# -----------------------------------------------------------
 	# Calculate target width:
@@ -378,9 +382,9 @@ def align_tokens(lines, right):
 	right_side_of_decimal = 0  # At most, how many characters right of a decimal point?
 	align_width           = 0
 
-	for ix, token in enumerate(lines):
+	for ix, token in enumerate(tokens):
 		is_number = RE_NUMBER.match(token)
-		more_to_come = (len(right[ix]) > 0)
+		more_to_come = has_more_on_same_line[ix]
 
 		if more_to_come:
 			align_width = max(align_width, len(token))
@@ -403,15 +407,18 @@ def align_tokens(lines, right):
 
 	aligned_lines = []
 
-	for ix, token in enumerate(lines):
+	for ix, token in enumerate(tokens):
+		aligned_token = ''
+
 		if decimal_place[ix] != None:
 			# right-align number:
-			token = spaces(rightmost_decimal - decimal_place[ix]) + token
+			aligned_token += spaces(rightmost_decimal - decimal_place[ix])
 
-		token += spaces(1 + align_width - len(token)) # +1: we want at least one!
-		aligned_lines.append( token )
+		aligned_token += token
+		aligned_token += spaces(1 + align_width - len(aligned_token)) # +1: we want at least one!
+		aligned_lines.append(aligned_token)
 
-	spam("align_tokens: ", lines, " => ", aligned_lines)
+	spam("align_tokens: ", tokens, " => ", aligned_lines)
 	return aligned_lines
 
 

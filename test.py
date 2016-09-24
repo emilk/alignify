@@ -59,6 +59,17 @@ TESTS = [
 	),
 	(
 		"""
+			a b
+			a_very_long_thing
+			short thing
+		""", """
+			a     b
+			a_very_long_thing
+			short thing
+		"""
+	),
+	(
+		"""
 			C++ // C++ comment
 			Python # Bash/Python comment
 			Lua -- lua comment
