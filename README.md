@@ -28,7 +28,7 @@ Code readability matters. Alignify makes it easier to produce clean and readable
 * Alignify will leave indentation intact (tabs as well as spaces)
 * The output can be re-alignified (eg. to re-align after a change)
 * Alignify will recognize quoted strings (`"double"` and `'single'`)
-* Alignify will recognize `//C++` and `--Lua` comments
+* Alignify will recognize `// C++`, `# Bash/Python` and `-- Lua` comments
 
 
 ## How to use it

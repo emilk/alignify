@@ -30,6 +30,7 @@
 # 3.0.3 - 2014-06-27  -  Fixed issue with aligning to last token on a line
 # 3.1   - 2014-07-03  -  {}-nodes now aligned together, then aligned with string-nodes
 # 3.1.0 - 2015-04-28  -  Switched to semantic versioning
+# 3.1.1 - 2016-09-24  -  Minor fix for misinterpreting --decrement for -- Lua comment.
 
 # -----------------------------------------------------------
 # Global settings:
@@ -195,16 +196,16 @@ def parse(s, i = 0, until = None):
 						break
 					else:
 						i += 1
-			elif i+1 < n and c == '-' and s[i+1] == '-':
+			elif i + 2 < n and c == '-' and s[i+1] == '-' and s[i+2] == ' ':
 				# -- one line Lua comment
+				# We only support these with a space after, or we get confused by --i; in C/C++
 				i = n
-			elif i+1 < n and c == '/' and s[i+1] == '/':
+			elif i + 1 < n and c == '/' and s[i+1] == '/':
 				# // one line C++ comment
 				i = n
-			elif i+1 < n and c == '#' and s[i+1] == ' ':
+			elif i + 1 < n and c == '#' and s[i+1] == ' ':
 				# # one line Python comment
-				# We only support these with a space after.
-				# Else we get confused by Lua # operator
+				# We only support these with a space after, else we get confused by Lua # operator
 				i = n
 			elif c in NESTINGS:
 				# eg:  foo(
