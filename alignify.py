@@ -95,6 +95,11 @@ rgb = [
 
 import re  # Our one dependency - regular expressions
 
+
+RE_NUMBER        = re.compile(r'^[+-]?\.?\d+.*$') # any number followed by whatever (e.g. a comma)
+RE_SIGN_OR_DIGIT = re.compile(r'^[\d+-]$')
+
+
 # For debugging
 def spam(*stuff):
 	#print( 'SPAM: ' + ''.join(map(str,stuff)) )
@@ -257,10 +262,9 @@ def parse(s, i = 0, until = None):
 	return nodes, i
 
 
-def align_and_collect(left_in, right_in):
-	assert(len(left_in) == len(right_in))
-	n = len(left_in)
-	spam("align_and_collect ", n, ": ", right_in)
+def align_ast_lines(ast_lines):
+	n = len(ast_lines)
+	spam("align_ast_lines ", n, ": ", ast_lines)
 
 	# Comments should always come last, like this:
 	# 	foo bar
@@ -270,29 +274,37 @@ def align_and_collect(left_in, right_in):
 	#   baz     // comment
 	#
 	comments = [None] * n
-	for ix, right in enumerate(right_in):
+	for ix, right in enumerate(ast_lines):
 		if len(right) > 0:
 			last = right[-1]
 			if isinstance(last, str) and is_comment(last):
 				comments[ix] = last
 				right.pop()
 
-	right_out = align_nodes(right_in)
-
-	out = []
-	for ix, line in enumerate(right_out):
-		out.append(left_in[ix] + right_out[ix].rstrip())
+	result = [line.rstrip() for line in align_nodes(ast_lines)]
 
 	if any(comments):
-		widest = len(max(out, key=len))
-		for ix, line in enumerate(out):
+		widest = len(max(result, key=len))
+		for ix, line in enumerate(result):
 			if comments[ix]:
 				pad_width = widest - len(line)
-				if any(right_in):
+				if any(ast_lines):
 					pad_width += 1
-				out[ix] = line + spaces(pad_width) + comments[ix]
+				result[ix] = line + spaces(pad_width) + comments[ix]
 
-	return '\n'.join(out) + '\n'
+	return result
+
+
+def concat_lines(left, right):
+	assert(len(left) == len(right))
+	return [l + r for l, r in zip (left, right)]
+
+
+def align_and_collect(left_indentation, right_ast_in):
+	assert(len(left_indentation) == len(right_ast_in))
+	right_aligned = align_ast_lines(right_ast_in)
+	result = concat_lines(left_indentation, right_aligned)
+	return '\n'.join(result) + '\n'
 
 
 def align_nodes(lines):
@@ -333,8 +345,8 @@ def align_nodes(lines):
 			tokens.append(nodes[0])
 			tokens_right.append(nodes[1:])
 
-	tokens_out_left  = align_tokens( tokens,      tokens_right )
-	tokens_out_right = align_nodes(  tokens_right )
+	tokens_out_left  = align_tokens(tokens, tokens_right)
+	tokens_out_right = align_nodes(tokens_right)
 
 	# ----------------------------------------------------
 
@@ -345,10 +357,6 @@ def align_nodes(lines):
 
 	spam("align_nodes: ", lines, " -> ", out_lines)
 	return out_lines
-
-
-RE_NUMBER        = re.compile( r'^[+-]?\.?\d+.*$' ) # any number followed by whatever (e.g. a comma)
-RE_SIGN_OR_DIGIT = re.compile( r'^[\d+-]$'        )
 
 
 def spaces(num):
