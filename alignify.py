@@ -1,8 +1,10 @@
-#!/usr/bin/python
-#
-# Made by Emil Ernerfeldt (emil ernerfeldt at gmail dot com)
+#!/usr/bin/env python
 # https://github.com/emilk/alignify
-# Feel free to use, abuse, modify, redistribute.
+# By Emil Ernerfeldt 2013-2016
+# LICENSE:
+#   This software is dual-licensed to the public domain and under the following
+#   license: you are granted a perpetual, irrevocable license to copy, modify,
+#   publish, and distribute this file as you see fit.
 #
 # Usage:  cat test.txt | python alignify_cli.py
 # Or:     python alignify_cli.py test.txt
