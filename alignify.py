@@ -31,6 +31,7 @@
 # 3.1   - 2014-07-03  -  {}-nodes now aligned together, then aligned with string-nodes
 # 3.1.0 - 2015-04-28  -  Switched to semantic versioning
 # 3.1.1 - 2016-09-24  -  Minor fix for misinterpreting --decrement for -- Lua comment.
+# 3.1.2 - 2016-09-24  -  Comments always aligned together right-most.
 
 # -----------------------------------------------------------
 # Global settings:
@@ -116,8 +117,8 @@ def alignify_lines(lines):
 		spam("line: '", line, "'")
 
 		if g_ignore_empty_lines and line == '':
-			left.append( '' )
-			right.append( '' )
+			left.append('')
+			right.append('')
 			continue
 
 		if g_suffer_whitespace_indentation:
@@ -145,8 +146,8 @@ def alignify_lines(lines):
 			left  = []
 			right = []
 
-		left.append( indent )
-		right.append( nodes )
+		left.append(indent)
+		right.append(nodes)
 		last_indent = indent
 
 	output += align_and_collect(left, right)
@@ -155,6 +156,25 @@ def alignify_lines(lines):
 		output = output[0:-1]
 
 	return output
+
+
+def is_comment(s):
+	if len(s) >= 2 and s[0] == '#' and s[1] == ' ':
+		# # one line Python comment
+		# We only support these with a space after, else we get confused by Lua # operator
+		return True
+
+	if len(s) >= 2 and s[0] == '/' and s[1] == '/':
+		# // one line C++ comment
+		return True
+
+	if len(s) >= 3 and s[0] == '-' and s[1] == '-' and s[2] == ' ':
+		# -- one line Lua comment
+		# We only support these with a space after, or we get confused by --i; in C/C++
+		return True
+
+	return False
+
 
 
 # Recursive decent - breaks at end or reaching when pushing a string node starting with character 'until'.
@@ -196,17 +216,10 @@ def parse(s, i = 0, until = None):
 						break
 					else:
 						i += 1
-			elif i + 2 < n and c == '-' and s[i+1] == '-' and s[i+2] == ' ':
-				# -- one line Lua comment
-				# We only support these with a space after, or we get confused by --i; in C/C++
+
+			elif is_comment(s[i:]):
 				i = n
-			elif i + 1 < n and c == '/' and s[i+1] == '/':
-				# // one line C++ comment
-				i = n
-			elif i + 1 < n and c == '#' and s[i+1] == ' ':
-				# # one line Python comment
-				# We only support these with a space after, else we get confused by Lua # operator
-				i = n
+
 			elif c in NESTINGS:
 				# eg:  foo(
 				opener = s[start:i+1]
@@ -223,12 +236,14 @@ def parse(s, i = 0, until = None):
 						return nodes,i
 				start = i
 				i += 1
+
 			elif c in SPACE_AFTER:
 				nodes.append( s[start:i+1] )
 				if nodes[-1][0] == until:
 					return nodes,i
 				i += 1
 				start = i
+
 			else:
 				i += 1
 
@@ -247,10 +262,36 @@ def align_and_collect(left_in, right_in):
 	n = len(left_in)
 	spam("align_and_collect ", n, ": ", right_in)
 
+	# Comments should always come last, like this:
+	# 	foo bar
+	# 	baz // comment
+	# ->
+	#   foo bar
+	#   baz     // comment
+	#
+	comments = [None] * n
+	for ix, right in enumerate(right_in):
+		if len(right) > 0:
+			last = right[-1]
+			if isinstance(last, str) and is_comment(last):
+				comments[ix] = last
+				right.pop()
+
 	right_out = align_nodes(right_in)
-	out = [None] * n
+
+	out = []
 	for ix, line in enumerate(right_out):
-		out[ix] = left_in[ix] + right_out[ix].rstrip()
+		out.append(left_in[ix] + right_out[ix].rstrip())
+
+	if any(comments):
+		widest = len(max(out, key=len))
+		for ix, line in enumerate(out):
+			if comments[ix]:
+				pad_width = widest - len(line)
+				if any(right_in):
+					pad_width += 1
+				out[ix] = line + spaces(pad_width) + comments[ix]
+
 	return '\n'.join(out) + '\n'
 
 
@@ -263,8 +304,8 @@ def align_nodes(lines):
 	# ----------------------------------------------------
 	# Find list nodes and convert to strings:
 
-	list_lines   = []
-	lists        = []
+	list_lines = []
+	lists      = []
 
 	for line_nr, nodes in enumerate(lines):
 		if len(nodes) > 0 and type(nodes[0]) is list:
@@ -292,7 +333,7 @@ def align_nodes(lines):
 			tokens.append(nodes[0])
 			tokens_right.append(nodes[1:])
 
-	tokens_out_left  = aling_tokens( tokens,      tokens_right )
+	tokens_out_left  = align_tokens( tokens,      tokens_right )
 	tokens_out_right = align_nodes(  tokens_right )
 
 	# ----------------------------------------------------
@@ -314,12 +355,12 @@ def spaces(num):
 	return num * ' '
 
 # lines = list of single tokens == list of strings
-def aling_tokens(lines, right):
+def align_tokens(lines, right):
 	n = len(lines)
 	if n == 0:
 		return []
 
-	spam("aling_tokens: ", len(lines))
+	spam("align_tokens: ", len(lines))
 
 	# -----------------------------------------------------------
 	# Calculate target width:
@@ -362,7 +403,7 @@ def aling_tokens(lines, right):
 		token += spaces(1 + align_width - len(token)) # +1: we want at least one!
 		aligned_lines.append( token )
 
-	spam("aling_tokens: ", lines, " => ", aligned_lines)
+	spam("align_tokens: ", lines, " => ", aligned_lines)
 	return aligned_lines
 
 

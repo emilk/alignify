@@ -5,8 +5,7 @@ TESTS = [
 	(
 		"""
 			Use this as a template
-		""" ,
-		"""
+		""", """
 			Use this as a template
 		"""
 	),
@@ -15,8 +14,7 @@ TESTS = [
 			one foo
 			two
 			three bar
-		""" ,
-		"""
+		""", """
 			one   foo
 			two
 			three bar
@@ -27,8 +25,7 @@ TESTS = [
 			int one = 1; // Duh
 			float pi = 3;   // Close enough.
 			string h2g2 = 42; // ...
-		""" ,
-		"""
+		""", """
 			int    one  =  1; // Duh
 			float  pi   =  3; // Close enough.
 			string h2g2 = 42; // ...
@@ -39,8 +36,7 @@ TESTS = [
 			red = { 255, 0, 0 }
 			green = { 0, 255, 0 }
 			blue = { 0, 0, 255 }
-		""" ,
-		"""
+		""", """
 			red   = { 255,   0,   0 }
 			green = {   0, 255,   0 }
 			blue  = {   0,   0, 255 }
@@ -53,8 +49,7 @@ TESTS = [
 			1 |
 			1.2 |
 			.1337       |
-		""" ,
-		"""
+		""", """
 			123      |
 			 23.45   |
 			  1      |
@@ -68,8 +63,7 @@ TESTS = [
 			Python # Bash/Python comment
 			Lua -- lua comment
 			--i; // C++ statement
-		""" ,
-		"""
+		""", """
 			C++    // C++ comment
 			Python # Bash/Python comment
 			Lua    -- lua comment
@@ -78,12 +72,38 @@ TESTS = [
 	),
 	(
 		"""
-			int x; // Another comment
-			float y = 32; // Comment
-		""" ,
-		"""
+			int x; // Some comment
+			float y = 32; // Another comment
+		""", """
 			int   x;      // Some comment
 			float y = 32; // Another comment
+		"""
+	),
+	(
+		"""
+			short(); // One-line comments should come after everything else
+			some = very.long(line);
+		""", """
+			short();                // One-line comments should come after everything else
+			some = very.long(line);
+		"""
+	),
+	(
+		"""
+			// Only a comment
+		""", """
+			// Only a comment
+		"""
+	),
+	(
+		"""
+			int x;
+			map<a, b> y;
+			map<int, string> z;
+		""", """
+			int              x;
+			map<a,   b>      y;
+			map<int, string> z;
 		"""
 	),
 ]
