@@ -1,6 +1,6 @@
 # Alignify
 
-# LICENSE:
+# License
 This software is dual-licensed to the public domain and under the following license: you are granted a perpetual, irrevocable license to copy, modify, publish, and distribute this file as you see fit.
 
 ## What
@@ -23,12 +23,14 @@ For more examples, see `sample_in.txt` vs `sample_out.txt`
 Code readability matters. Alignify makes it easier to produce clean and readable code.
 
 
-## Key points:
+## Key points
 * Alignify will align code blocks using spaces
 * Alignify will leave indentation intact (tabs as well as spaces)
 * The output can be re-alignified (eg. to re-align after a change)
 * Alignify will recognize quoted strings (`"double"` and `'single'`)
 * Alignify will recognize `// C++`, `# Bash/Python` and `-- Lua` comments
+* Alignify will not insert spaces except to align.
+* Alignify may shorten the spacing in you code, but will always keep at least one space.
 
 
 ## How to use it
@@ -55,7 +57,7 @@ Open Vim and mark the text you want to align with `V (shift+v)` and then `ctrl+s
 * Create a new script in Automator
 * Drag-drop a "Run Shell Script" (under Library->Utilities)
 * Pick /usr/bin/python
-* Make sure "Ouput replaces selected text" is checked
+* Make sure "Output replaces selected text" is checked
 * Save it as "Alignify"
 * Open System Preferences -> Keyboard
 * Under "Services", bind cmd-shift-A to Alignify
@@ -67,7 +69,7 @@ Open Vim and mark the text you want to align with `V (shift+v)` and then `ctrl+s
 ### In Qt Creator (Windows)
 
 * Choose Tools->External->Configure... from the main menu.
-* Select 'Text' in the tree-view and klick the Add-button and choose 'Add Tool'.
+* Select 'Text' in the tree-view and click the Add-button and choose 'Add Tool'.
 * Name the tool 'Alignify'
 * Write a short description in the 'Description'-field.
 * Enter the path to your python.exe in the 'Executable'-field.
@@ -87,9 +89,8 @@ To bind the tool to a keyboard shortcut:
 Click OK and you're good to go.
 
 
-## TODO:
+## TODO
 * Group `<...>` for C++ templates.
-* Don't add extra spaces after/before {}
 
 
 ## I want to help

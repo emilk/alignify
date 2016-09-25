@@ -178,6 +178,24 @@ TESTS = [
 	),
 	(
 		"""
+			Map<String, Int> foo;
+			bool bar = 10;
+		""", """
+			Map<String, Int> foo;
+			bool             bar = 10;
+		"""
+	),
+	(
+		"""
+			Map<String, Int> foo = 10;
+			bool bar;
+		""", """
+			Map<String, Int> foo = 10;
+			bool             bar;
+		"""
+	),
+	(
+		"""
 			int x = 2;
 			int baz = 30;
 			int foobar;
@@ -275,15 +293,6 @@ TESTS = [
 		""", """
 			print   a + b;
 			println c;
-		"""
-	),
-	(
-		"""
-			Map<String, Int> foo;
-			bool bar = 10;
-		""", """
-			Map<String, Int> foo;
-			bool             bar = 10;
 		"""
 	),
 ]

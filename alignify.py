@@ -490,16 +490,19 @@ def is_alpha_num(c):
 def character_similarity(a, b):
 	if re.match(RE_CHARACTER, a):
 		if re.match(RE_CHARACTER, b):
-			return +3
+			if a.isupper() == b.isupper():
+				return 4
+			else:
+				return 2
 		else:
 			return 0 # -3
 	elif re.match(RE_DIGIT, a):
 		if re.match(RE_DIGIT, b):
-			return +3
+			return 3
 		else:
 			return 0 # -3
 	elif a == b:
-		return +10
+		return 10
 	else:
 		return 0 # -1
 
