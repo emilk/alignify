@@ -106,6 +106,9 @@ rgb = [
 
 '''
 
+# Experimental: parse spaces as separate tokens
+g_space_tokens = True
+
 # -----------------------------------------------------------
 # Actual code time!
 
@@ -226,25 +229,33 @@ def parse(s, i = 0, until = None):
 	A token is a continuing block of code with no unquoted spaces
 	'''
 
-	SPACE_BEFORE = "}"
-	SPACE_AFTER  = "{,"
-	NESTINGS = {
-		'{': '}',
-		#'(': ')',
-		#'[': ']',
-	}
+	if g_space_tokens:
+		SPACE_BEFORE = ""
+		SPACE_AFTER  = ""
+		NESTINGS = {
+			'{': '}',
+			# '(': ')', # Will sometimes add spaces between ()
+			# '[': ']',
+			# '<': '>',
+		}
+	else:
+		SPACE_BEFORE = "}"
+		SPACE_AFTER  = "{,"
+		NESTINGS = {
+			'{': '}',
+		}
 
 	nodes = []
 	n = len(s)
 
 	while i < n:
 		# Skip spaces:
-		# did_skip_spaces = False
+		did_skip_spaces = False
 		while i < n and s[i] == ' ':
 			i += 1
-		# 	did_skip_spaces = True
-		# if did_skip_spaces:
-		# 	nodes.append(' ')
+			did_skip_spaces = True
+		if g_space_tokens and did_skip_spaces:
+			nodes.append(' ')
 
 		start = i
 
@@ -266,26 +277,25 @@ def parse(s, i = 0, until = None):
 				i = n
 
 			elif c in NESTINGS:
-				# eg:  foo(
+				# eg:  foo{
 				opener = s[start:i+1]
 				nested, i = parse(s, i+1, NESTINGS[c])
-				nested.insert( 0, opener )
-				nodes.append( nested )
-				i += 1
+				nested.insert(0, opener)
+				nodes.append(nested)
 				start = i
 
 			elif c in SPACE_BEFORE:
 				if start != i:
-					nodes.append( s[start:i] )
+					nodes.append(s[start:i])
 					if nodes[-1][0] == until:
-						return nodes,i
+						return nodes, i
 				start = i
 				i += 1
 
 			elif c in SPACE_AFTER:
-				nodes.append( s[start:i+1] )
+				nodes.append(s[start:i+1])
 				if nodes[-1][0] == until:
-					return nodes,i
+					return nodes, i
 				i += 1
 				start = i
 
@@ -295,7 +305,7 @@ def parse(s, i = 0, until = None):
 		if start != i:
 			nodes.append( s[start:i] )
 			if nodes[-1][0] == until:
-				return nodes,i
+				return nodes, i
 
 	spam("parse: ", s, " -> ", nodes)
 
@@ -353,7 +363,7 @@ def append_comments(lines, comments):
 		for line_nr in range(len(lines)):
 			if comments[line_nr]:
 				pad_width = widest - len(lines[line_nr])
-				if widest > 0:
+				if not g_space_tokens and widest > 0:
 					pad_width += 1
 				lines[line_nr] += spaces(pad_width) + comments[line_nr]
 
@@ -405,14 +415,23 @@ def align_columns(lines):
 	assert len(lines) > 0
 	assert_is_list_of_strings(lines[0])
 
+	# print("align_columns: {}".format(lines))
+
 	num_lines = len(lines)
 	num_columns = len(lines[0])
 	output = num_lines * ['']
 
 	for column_idx in range(num_columns):
+		if g_space_tokens:
+			# Find space tokens and append:
+			for line_nr, line in enumerate(lines):
+				if line[column_idx] == ' ':
+					output[line_nr] += ' '
+					line[column_idx] = ''
+
 		# Find lines with non-empty tokens at this column:
-		line_numbers          = []
-		tokens                = []
+		line_numbers = []
+		tokens       = []
 		for line_nr, line in enumerate(lines):
 			assert isinstance(line[column_idx], str)
 			if line[column_idx] != '':
@@ -427,7 +446,7 @@ def align_columns(lines):
 			for line_nr in line_numbers:
 				max_width = max(max_width, len(output[line_nr]))
 
-			if max_width > 0:
+			if not g_space_tokens and max_width > 0:
 				for line_nr in line_numbers:
 					if len(output[line_nr]) == max_width:
 						if not output[line_nr].endswith(' '):
@@ -485,6 +504,10 @@ def character_similarity(a, b):
 		return 0 # -1
 
 
+def is_operator_token(x):
+	return len(x) == 1 and x != ' '
+
+
 def token_similarity(a, b):
 	assert isinstance(a, str)
 	assert isinstance(b, str)
@@ -497,7 +520,7 @@ def token_similarity(a, b):
 	# And this:
 	#     print a + b;
 	#     print     c;
-	if a != b and (len(a) == 1 or len(b) == 1):
+	if a != b and (is_operator_token(a) or is_operator_token(b)):
 		return -500
 
 	if a == '' or  b == '':

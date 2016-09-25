@@ -89,7 +89,7 @@ Click OK and you're good to go.
 
 ## TODO:
 * Group `<...>` for C++ templates.
-* Don't add spaces after/before {}
+* Don't add extra spaces after/before {}
 
 
 ## I want to help

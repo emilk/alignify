@@ -189,13 +189,39 @@ TESTS = [
 	),
 	(
 		"""
+			( foo )
+			( { a } )
+		""", """
+			( foo   )
+			( { a } )
+		"""
+	),
+	(
+		"""
 			( foo, bar, foobar, badger, mushroom, snake )
-			( { a, b, c },{ a, b, c },{ a, b, c },{ a, b, c },{ a, b, c },{ a, b, c } )
-			( { foo, bar, baz },{ short },{ a, b, c },{ a, b, c },{ a, b, c },{ a, b, c } )
+			( { a, b, c }, { a, b, c }, { a, b, c }, { a, b, c }, { a, b, c }, { a, b, c } )
+			( { foo, bar, baz }, { short }, { a, b, c }, { a, b, c }, { a, b, c }, { a, b, c } )
 		""", """
 			( foo,               bar,         foobar,      badger,      mushroom,    snake       )
 			( { a,   b,   c   }, { a, b, c }, { a, b, c }, { a, b, c }, { a, b, c }, { a, b, c } )
 			( { foo, bar, baz }, { short   }, { a, b, c }, { a, b, c }, { a, b, c }, { a, b, c } )
+		"""
+	),
+	(
+		"""
+			Matrix x = {
+				{ 12, 0, 0, 0 },
+				{ 0, 0.2, 0, 0 },
+				{ 0, 0, -10, 0 },
+				{ 0.3, 0, 0, 46 },
+			}
+		""", """
+			Matrix x = {
+				{ 12,   0,     0,  0 },
+				{  0,   0.2,   0,  0 },
+				{  0,   0,   -10,  0 },
+				{  0.3, 0,     0, 46 },
+			}
 		"""
 	),
 	(
@@ -208,10 +234,10 @@ TESTS = [
 			}
 		""", """
 			Matrix x = {
-				{ 12,   0,     0,  0 },
-				{  0,   0.2,   0,  0 },
-				{  0,   0,   -10,  0 },
-				{  0.3, 0,     0, 46 },
+				{12,   0,     0,  0},
+				{ 0,   0.2,   0,  0},
+				{ 0,   0,   -10,  0},
+				{ 0.3, 0,     0, 46},
 			}
 		"""
 	),
@@ -249,6 +275,15 @@ TESTS = [
 		""", """
 			print   a + b;
 			println c;
+		"""
+	),
+	(
+		"""
+			Map<String, Int> foo;
+			bool bar = 10;
+		""", """
+			Map<String, Int> foo;
+			bool             bar = 10;
 		"""
 	),
 ]
