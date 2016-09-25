@@ -332,35 +332,37 @@ def collapse_list_nodes(ast_lines):
 	return str_lines
 
 
-def token_similarity(a, b):
-	if a == '':
-		return 0
+def character_similarity(a, b):
+	if re.match(RE_CHARACTER, a):
+		if re.match(RE_CHARACTER, b):
+			return +3
+		else:
+			return 0 # -3
+	elif re.match(RE_DIGIT, a):
+		if re.match(RE_DIGIT, b):
+			return +3
+		else:
+			return 0 # -3
+	elif a == b:
+		return +2
+	else:
+		return 0 # -1
 
-	if b == '':
+
+def token_similarity(a, b):
+	if a == '' or  b == '':
 		return 0
 
 	if a == b:
-		return 10
+		return 10000
 
 	similarity = 0
+	similarity += character_similarity(a[0], b[0])
+	similarity += character_similarity(a[-1], b[-1])
 
-	if re.match(RE_CHARACTER, a[0]):
-		if re.match(RE_CHARACTER, b[0]):
-			similarity += 3
-		else:
-			similarity -= 3
-
-	if re.match(RE_DIGIT, a[0]):
-		if re.match(RE_DIGIT, b[0]):
-			similarity += 3
-		else:
-			similarity -= 3
-
-	if a[-1] == b[-1]:
-		similarity += 2
-
-	if a[0] == b[0]:
-		similarity += 2
+	# Use token length as a tie-breaker;
+	similarity *= 100
+	similarity -= abs(len(a) - len(b))
 
 	return similarity
 
@@ -381,6 +383,32 @@ def expand_short_line(long_line, short_line):
 
 	return [short_line[0]] + expand_line_ending(long_line[1:], short_line[1:])
 
+
+# TODO: remove, or make sure that more non-empty-token matches is not an automatic win!
+def expand_one_or_the_other(line_a, line_b):
+	a_expanded = expand_line_ending(line_b, line_a)
+	b_expanded = expand_line_ending(line_a, line_b)
+
+	a_expanded_similarity = calc_similarity(line_b, a_expanded)
+	b_expanded_similarity = calc_similarity(line_a, b_expanded)
+
+	# print("line_a:                {}".format(line_a))
+	# print("line_b:                {}".format(line_b))
+	# print("a_expanded:            {}".format(a_expanded))
+	# print("b_expanded:            {}".format(b_expanded))
+	# print("a_expanded_similarity: {}".format(a_expanded_similarity))
+	# print("b_expanded_similarity: {}".format(b_expanded_similarity))
+
+	if a_expanded_similarity < b_expanded_similarity:
+		return line_a, b_expanded
+	elif b_expanded_similarity < a_expanded_similarity:
+		return a_expanded, line_b
+	elif len(a_expanded) + len(line_b) < len(line_a) + len(b_expanded):
+		return a_expanded, line_b
+	else:
+		return line_a, b_expanded
+
+
 def expand_line_ending(long_line, short_line):
 	# We want to insert '' tokens into short_line in places so as to
 	# maximize its similarity to long_line, as defined by calc_similarity.
@@ -390,7 +418,7 @@ def expand_line_ending(long_line, short_line):
 	# assuming we can insert more empty tokens after point 'b'
 	# We can fill this in dynamically (memoization style)
 
-	N = len(long_line)
+	N = max(len(long_line), len(short_line))
 	similarity = N * [N * [None]]
 
 	# print("long line:  {}".format(long_line))
@@ -417,20 +445,25 @@ def expand_line_ending(long_line, short_line):
 	a = 0
 	b = 0
 	while b < len(short_line):
-		# print("a, b: {} {}".format(a, b))
-		match_similarity = \
-			token_similarity(long_line[a], short_line[b]) + dynamic_similarity(a + 1, b + 1)
-		insert_similarity = dynamic_similarity(a + 1, b)
+		if a < len(long_line):
+			# print("a, b: {} {}".format(a, b))
+			match_similarity = \
+				token_similarity(long_line[a], short_line[b]) + dynamic_similarity(a + 1, b + 1)
+			insert_similarity = dynamic_similarity(a + 1, b)
 
-		# print("match/insert similarity: {}/{}".format(match_similarity, insert_similarity))
+			# print("match/insert similarity: {}/{}".format(match_similarity, insert_similarity))
 
-		if match_similarity >= insert_similarity:
-			result_line.append(short_line[b])
-			a += 1
-			b += 1
+			if match_similarity >= insert_similarity:
+				result_line.append(short_line[b])
+				a += 1
+				b += 1
+			else:
+				result_line.append('')
+				a += 1
 		else:
-			result_line.append('')
-			a += 1
+			result_line.append(short_line[b])
+			b += 1
+
 
 	# print("similarity: {}".format(similarity))
 	# print("result_line: {}".format(result_line))
@@ -445,7 +478,14 @@ def expand_line_ending(long_line, short_line):
 # By inserting a phantom token between "int" and "bar" to align with "y>"
 def expand_short_lines(lines):
 	longest_line = max(lines, key=len)
-	return [expand_short_line(longest_line, line) for line in lines]
+	if False:
+		for ix, line in enumerate(lines):
+			if line == longest_line:
+				continue
+			longest_line, lines[ix] = expand_one_or_the_other(longest_line, lines[ix])
+		return lines
+	else:
+		return [expand_short_line(longest_line, line) for line in lines]
 
 
 def align_nodes(ast_lines):

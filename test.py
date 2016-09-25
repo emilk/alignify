@@ -139,6 +139,44 @@ TESTS = [
 			std::vector<std::string>        bar;
 		"""
 	),
+	(
+		"""
+			std::map<std::string, unsigned> foo = 0;
+			int bar = 0;
+		""", """
+			std::map<std::string, unsigned> foo = 0;
+			int                             bar = 0;
+		"""
+	),
+	(
+		"""
+			std::map<std::string, unsigned> foo = 0;
+			int bar;
+		""", """
+			std::map<std::string, unsigned> foo = 0;
+			int                             bar;
+		"""
+	),
+	(
+		"""
+			std::map<std::string, unsigned> foo;
+			int bar = 0;
+		""", """
+			std::map<std::string, unsigned> foo;
+			int                             bar = 0;
+		"""
+	),
+	(
+		"""
+			int x = 2;
+			int baz = 30;
+			int foobar;
+		""", """
+			int x   =  2;
+			int baz = 30;
+			int foobar;
+		"""
+	),
 ]
 
 def main():
