@@ -3,6 +3,14 @@ import alignify
 
 TESTS = [
 	(
+		"",
+		""
+	),
+	(
+		"hello   world       !",
+		"hello world !"
+	),
+	(
 		"""
 			one foo
 			two
@@ -173,12 +181,12 @@ TESTS = [
 	(
 		"""
 			( foo, bar, foobar, badger, mushroom, snake )
-			( { a, b, c },{ a, b, c] },{ a, b, c },{ a, b, c },{ a, b, c },{ a, b, c } )
+			( { a, b, c },{ a, b, c },{ a, b, c },{ a, b, c },{ a, b, c },{ a, b, c } )
 			( { foo, bar, baz },{ short },{ a, b, c },{ a, b, c },{ a, b, c },{ a, b, c } )
 		""", """
-			( foo,               bar,             foobar,      badger,      mushroom,    snake       )
-			( { a,   b,   c   }, { a,    b, c] }, { a, b, c }, { a, b, c }, { a, b, c }, { a, b, c } )
-			( { foo, bar, baz }, { short       }, { a, b, c }, { a, b, c }, { a, b, c }, { a, b, c } )
+			( foo,               bar,         foobar,      badger,      mushroom,    snake       )
+			( { a,   b,   c   }, { a, b, c }, { a, b, c }, { a, b, c }, { a, b, c }, { a, b, c } )
+			( { foo, bar, baz }, { short   }, { a, b, c }, { a, b, c }, { a, b, c }, { a, b, c } )
 		"""
 	),
 	(
@@ -205,6 +213,15 @@ TESTS = [
 		""", """
 			{ foo     }
 			{ a, b, c }
+		"""
+	),
+	(
+		"""
+			foo |
+			a, b, c |
+		""", """
+			foo     |
+			a, b, c |
 		"""
 	),
 ]

@@ -34,6 +34,22 @@
 # 3.1.2 - 2016-09-24  -  Comments always aligned together right-most.
 
 # -----------------------------------------------------------
+# Algorithm overview:
+#     Split each line into indentation and meat
+#     Group lines based on indentation
+#     For each group:
+#         Parse the meat on each line into an list of AST Node:s
+#         Remove trailing comments, and put them to the side.
+#             Intelligently add dummy '' tokens to short lines, so all lines are equally long
+#             For each column:
+#                 If the column has any lines with {groups}, recurse on those and replace
+#             For each column, for those lines that have non-empty token on that line:
+#                 Look for decimal places, and align on that (if any)
+#                 Pad so each token starts on the same column
+#         Append any trailing comments
+#
+
+# -----------------------------------------------------------
 # Global settings:
 
 g_ignore_empty_lines = True
@@ -119,6 +135,7 @@ def assert_is_node(x):
 	if not isinstance(x, str):
 		assert isinstance(x, list), "Expected Node (str or list), got {}: {}".format(type(x), x)
 		for elem in x:
+			assert id(elem) != id(x), "Self-containing list: {}".format(x)
 			assert_is_node(elem)
 
 
@@ -134,9 +151,9 @@ def alignify_string(s):
 
 def alignify_lines(lines):
 	# Split into blocks of same indentation:
-	left        = []
-	right       = []
-	last_indent = None
+	block_indent = []
+	block_meat   = []
+	last_indent  = None
 
 	output = ""
 
@@ -144,8 +161,8 @@ def alignify_lines(lines):
 		spam("line: '", line, "'")
 
 		if g_ignore_empty_lines and line == '':
-			left.append('')
-			right.append('')
+			block_indent.append('')
+			block_meat.append([''])
 			continue
 
 		if g_suffer_whitespace_indentation:
@@ -158,9 +175,6 @@ def alignify_lines(lines):
 			indent = m.group(1)
 			meat   = m.group(2)
 
-		#spam("indent: '", indent, "'")
-		#spam("meat:  '", meat, "'")
-
 		# Replace non-leading tabs with spaces. Any number of spaces will work.
 		meat = re.sub(r'\t', '  ', meat)
 		nodes, _ = parse(meat)
@@ -169,15 +183,15 @@ def alignify_lines(lines):
 		if last_indent != None and indent != last_indent:
 			# A change in indentation - align what we have so far:
 			spam("alignify_lines: indentation break: '", indent, "'")
-			output += align_and_collect(left, right)
-			left  = []
-			right = []
+			output += align_and_collect(block_indent, block_meat)
+			block_indent = []
+			block_meat   = []
 
-		left.append(indent)
-		right.append(nodes)
+		block_indent.append(indent)
+		block_meat.append(nodes)
 		last_indent = indent
 
-	output += align_and_collect(left, right)
+	output += align_and_collect(block_indent, block_meat)
 
 	if output.endswith('\n'):
 		output = output[0:-1]
@@ -225,8 +239,12 @@ def parse(s, i = 0, until = None):
 
 	while i < n:
 		# Skip spaces:
+		# did_skip_spaces = False
 		while i < n and s[i] == ' ':
 			i += 1
+		# 	did_skip_spaces = True
+		# if did_skip_spaces:
+		# 	nodes.append(' ')
 
 		start = i
 
@@ -284,10 +302,28 @@ def parse(s, i = 0, until = None):
 	return nodes, i
 
 
-def align_ast_lines(ast_lines):
-	n = len(ast_lines)
-	spam("align_ast_lines ", n, ": ", ast_lines)
+def concat_lines(left, right):
+	assert len(left) == len(right)
+	assert_is_list_of_strings(left)
+	assert_is_list_of_strings(right)
+	return [l + r for l, r in zip (left, right)]
 
+
+def align_and_collect(left_indentation, ast_lines):
+	assert len(left_indentation) == len(ast_lines)
+	if len(left_indentation) == 0:
+		return "\n"
+
+	assert_is_list_of_strings(left_indentation)
+	assert_is_list_of_nodes(ast_lines[0])
+	comments = strip_comments(ast_lines)
+	lines = align_ast_lines(ast_lines)
+	lines = append_comments(lines, comments)
+	results = concat_lines(left_indentation, lines)
+	return "\n".join(results) + "\n"
+
+
+def strip_comments(ast_lines):
 	# Comments should always come last, like this:
 	# 	foo bar
 	# 	baz // comment
@@ -295,42 +331,110 @@ def align_ast_lines(ast_lines):
 	#   foo bar
 	#   baz     // comment
 	#
-	comments = [None] * n
-	for ix, right in enumerate(ast_lines):
+	comments = [None] * len(ast_lines)
+	for line_nr, right in enumerate(ast_lines):
 		if len(right) > 0:
 			last = right[-1]
 			if isinstance(last, str) and is_comment(last):
-				comments[ix] = last
+				comments[line_nr] = last
 				right.pop()
 
-	result = [line.rstrip() for line in align_nodes(ast_lines)]
+	return comments
 
+
+def append_comments(lines, comments):
+	assert_is_list_of_strings(lines)
 	if any(comments):
-		widest = len(max(result, key=len))
-		for ix, line in enumerate(result):
-			if comments[ix]:
-				pad_width = widest - len(line)
-				if any(ast_lines):
+		widest = len(max(lines, key=len))
+		for line_nr in range(len(lines)):
+			if comments[line_nr]:
+				pad_width = widest - len(lines[line_nr])
+				if any(lines):
 					pad_width += 1
-				result[ix] = line + spaces(pad_width) + comments[ix]
+				lines[line_nr] += spaces(pad_width) + comments[line_nr]
 
-	return result
-
-
-def concat_lines(left, right):
-	assert len(left) == len(right)
-	return [l + r for l, r in zip (left, right)]
+	return lines
 
 
-def align_and_collect(left_indentation, right_ast_in):
-	assert len(left_indentation) == len(right_ast_in)
-	assert_is_list_of_strings(left_indentation)
-	# if len(right_ast_in) > 0:
-	# 	assert_is_list_of_nodes(right_ast_in[0])
+def align_ast_lines(ast_lines):
+	assert len(ast_lines) > 0
+	assert_is_list_of_nodes(ast_lines[0])
+	# print("ast_lines: {}".format(ast_lines))
+	ast_lines = expand_short_lines(ast_lines)
+	# print("expanded:  {}".format(ast_lines))
+	ast_lines = unfold_list_nodes(ast_lines)
+	# print("unfolded:  {}".format(ast_lines))
+	assert_is_list_of_strings(ast_lines[0])
+	aligned = align_columns(ast_lines)
+	assert_is_list_of_strings(aligned)
+	# print("aligned:   {}".format(aligned))
+	return aligned
 
-	right_aligned = align_ast_lines(right_ast_in)
-	result = concat_lines(left_indentation, right_aligned)
-	return '\n'.join(result) + '\n'
+
+def unfold_list_nodes(in_ast_lines):
+	num_lines = len(in_ast_lines)
+	num_columns = len(in_ast_lines[0])
+
+	out_ast_lines = copy.deepcopy(in_ast_lines)
+
+	for column_idx in range(num_columns):
+		# Find list nodes and convert to strings:
+		line_numbers = []
+		lists        = []
+
+		for line_nr, line_nodes in enumerate(in_ast_lines):
+			if type(line_nodes[column_idx]) is list:
+				line_numbers.append(line_nr)
+				lists.append(line_nodes[column_idx])
+
+		if line_numbers:
+			aligned_lists = align_ast_lines(lists)
+			assert_is_list_of_strings(aligned_lists)
+
+			for line_nr, aligned in zip(line_numbers, aligned_lists):
+				out_ast_lines[line_nr][column_idx] = aligned
+
+	return out_ast_lines
+
+
+def align_columns(lines):
+	assert len(lines) > 0
+	assert_is_list_of_strings(lines[0])
+
+	num_lines = len(lines)
+	num_columns = len(lines[0])
+	output = num_lines * ['']
+
+	for column_idx in range(num_columns):
+		# Find lines with non-empty tokens at this column:
+		line_numbers          = []
+		tokens                = []
+		for line_nr, line in enumerate(lines):
+			assert isinstance(line[column_idx], str)
+			if line[column_idx] != '':
+				line_numbers.append(line_nr)
+				tokens.append(line[column_idx])
+
+		if tokens:
+			aligned_column = align_tokens(tokens)
+			assert_is_list_of_strings(aligned_column)
+
+			max_width = 0
+			for line_nr in line_numbers:
+				max_width = max(max_width, len(output[line_nr]))
+
+			if max_width > 0:
+				for line_nr in line_numbers:
+					if len(output[line_nr]) == max_width:
+						if not output[line_nr].endswith(' '):
+							max_width += 1
+							break
+
+			for line_nr, aligned in zip(line_numbers, aligned_column):
+				output[line_nr] += spaces(max_width - len(output[line_nr]))
+				output[line_nr] += aligned
+
+	return output
 
 
 def collapse_list_nodes(ast_lines):
@@ -504,58 +608,27 @@ def expand_line_ending(long_line, short_line):
 	# map<x, y> foo;
 	# int       bar;
 # By inserting a phantom token between "int" and "bar" to align with "y>"
-def expand_short_lines(lines):
-	assert isinstance(lines, list)
-	# assert is_list_of_strings(lines[0]), "Expected list of string, got {}".format(lines)
+# This function returns equally long lines (measured in Ast Ndoes)
+def expand_short_lines(in_lines):
+	assert isinstance(in_lines, list)
+	assert_is_list_of_nodes(in_lines[0])
 
-	longest_line = max(lines, key=len)
-	return [expand_short_line(longest_line, line) for line in lines]
+	longest_line = max(in_lines, key=len)
 
-def align_nodes(ast_lines):
-	if len(ast_lines) == 0:
-		return []
-
-	ast_lines = collapse_list_nodes(ast_lines)
-	ast_lines = expand_short_lines(ast_lines)
-	return align_token_lines(ast_lines)
-
-
-def align_token_lines(ast_lines):
-	if len(ast_lines) == 0:
-		return []
-
-	token_lines  = []
-	tokens       = []
-	tokens_right = []
-
-	for line_nr, nodes in enumerate(ast_lines):
-		if len(nodes) > 0:
-			assert type(nodes[0]) is str, "Expected str, got {}".format(nodes[0])
-			token_lines.append(line_nr)
-			tokens.append(nodes[0])
-			tokens_right.append(nodes[1:])
-
-	has_more_on_same_line = [len(tokens_right[ix]) > 0 for ix in range(len(tokens_right))]
-
-	tokens_out_left  = align_tokens(tokens, has_more_on_same_line)
-	tokens_out_right = align_nodes(tokens_right)
-
-	# ----------------------------------------------------
-
-	out_lines = [''] * len(ast_lines)
-
-	for ix, line_nr in enumerate(token_lines):
-		out_lines[line_nr] = tokens_out_left[ix] + tokens_out_right[ix]
-
-	spam("align_token_lines: ", ast_lines, " -> ", out_lines)
-	return out_lines
+	expanded = []
+	for line in in_lines:
+		expanded_line = expand_short_line(longest_line, line)
+		while len(expanded_line) < len(longest_line):
+			expanded_line.append('')
+		expanded.append(expanded_line)
+	return expanded
 
 
 def spaces(num):
 	return num * ' '
 
 # tokens = list of single tokens == list of strings
-def align_tokens(tokens, has_more_on_same_line):
+def align_tokens(tokens):
 	n = len(tokens)
 	if n == 0:
 		return []
@@ -568,15 +641,11 @@ def align_tokens(tokens, has_more_on_same_line):
 
 	decimal_place         = [None] * n
 	rightmost_decimal     = 0
-	right_side_of_decimal = 0  # At most, how many characters right of a decimal point?
-	align_width           = 0
+	# right_side_of_decimal = 0  # At most, how many characters right of a decimal point?
+	# align_width           = 0
 
 	for ix, token in enumerate(tokens):
 		is_number = RE_NUMBER.match(token)
-		more_to_come = has_more_on_same_line[ix]
-
-		if more_to_come:
-			align_width = max(align_width, len(token))
 
 		if is_number:
 			decimal_place[ix] = 0
@@ -587,9 +656,9 @@ def align_tokens(tokens, has_more_on_same_line):
 					break
 			spam("Number '%s' has decimal at %i" % (token, decimal_place[ix]))
 			rightmost_decimal     = max(rightmost_decimal,     decimal_place[ix])
-			right_side_of_decimal = max(right_side_of_decimal, len(token) - decimal_place[ix])
+			# right_side_of_decimal = max(right_side_of_decimal, len(token) - decimal_place[ix])
 
-	align_width = max(align_width, rightmost_decimal + right_side_of_decimal)
+	# align_width = max(align_width, rightmost_decimal + right_side_of_decimal)
 
 	# -----------------------------------------------------------
 	# Do the actual aligning:
@@ -604,7 +673,7 @@ def align_tokens(tokens, has_more_on_same_line):
 			aligned_token += spaces(rightmost_decimal - decimal_place[ix])
 
 		aligned_token += token
-		aligned_token += spaces(1 + align_width - len(aligned_token)) # +1: we want at least one!
+		# aligned_token += spaces(align_width - len(aligned_token))
 		aligned_lines.append(aligned_token)
 
 	spam("align_tokens: ", tokens, " => ", aligned_lines)
