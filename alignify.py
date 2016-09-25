@@ -93,7 +93,8 @@ rgb = [
 # -----------------------------------------------------------
 # Actual code time!
 
-import re  # Our one dependency - regular expressions
+import copy
+import re
 
 
 RE_NUMBER        = re.compile(r'^[+-]?\.?\d+.*$') # any number followed by whatever (e.g. a comma)
@@ -106,6 +107,25 @@ RE_CHARACTER     = re.compile(r'[a-zA-Z]')
 def spam(*stuff):
 	#print( 'SPAM: ' + ''.join(map(str,stuff)) )
 	pass
+
+
+# Type checks for debugging/readability:
+def assert_is_list_of_strings(x):
+	assert isinstance(x, list) and all((isinstance(elem, str) for elem in x)), \
+		   "Expected List[str], got '{}'".format(x)
+
+
+def assert_is_node(x):
+	if not isinstance(x, str):
+		assert isinstance(x, list), "Expected Node (str or list), got {}: {}".format(type(x), x)
+		for elem in x:
+			assert_is_node(elem)
+
+
+def assert_is_list_of_nodes(x):
+	assert isinstance(x, list), "Expected List[Node], got {}: {}".format(type(x), x)
+	for elem in x:
+		assert_is_node(elem)
 
 
 def alignify_string(s):
@@ -144,7 +164,7 @@ def alignify_lines(lines):
 		# Replace non-leading tabs with spaces. Any number of spaces will work.
 		meat = re.sub(r'\t', '  ', meat)
 		nodes, _ = parse(meat)
-		assert(type(nodes) is list)
+		assert_is_list_of_nodes(nodes)
 
 		if last_indent != None and indent != last_indent:
 			# A change in indentation - align what we have so far:
@@ -298,12 +318,16 @@ def align_ast_lines(ast_lines):
 
 
 def concat_lines(left, right):
-	assert(len(left) == len(right))
+	assert len(left) == len(right)
 	return [l + r for l, r in zip (left, right)]
 
 
 def align_and_collect(left_indentation, right_ast_in):
-	assert(len(left_indentation) == len(right_ast_in))
+	assert len(left_indentation) == len(right_ast_in)
+	assert_is_list_of_strings(left_indentation)
+	# if len(right_ast_in) > 0:
+	# 	assert_is_list_of_nodes(right_ast_in[0])
+
 	right_aligned = align_ast_lines(right_ast_in)
 	result = concat_lines(left_indentation, right_aligned)
 	return '\n'.join(result) + '\n'
@@ -324,12 +348,16 @@ def collapse_list_nodes(ast_lines):
 
 	# Replace list nodes with their aligned tokens:
 
-	str_lines = ast_lines
+	str_lines = copy.deepcopy(ast_lines)
 
 	for ix, line_nr in enumerate(list_lines):
 		str_lines[line_nr][0] = lists_as_strings[ix]
 
 	return str_lines
+
+
+def is_alpha_num(c):
+	return re.match(RE_CHARACTER, c) or re.match(RE_DIGIT, c)
 
 
 def character_similarity(a, b):
@@ -350,6 +378,9 @@ def character_similarity(a, b):
 
 
 def token_similarity(a, b):
+	assert isinstance(a, str)
+	assert isinstance(b, str)
+
 	if a == '' or  b == '':
 		return 0
 
@@ -358,7 +389,19 @@ def token_similarity(a, b):
 
 	similarity = 0
 	similarity += character_similarity(a[0], b[0])
-	similarity += character_similarity(a[-1], b[-1])
+
+	# Check last character? The problem then is that we want
+	#    x, y
+	#    z
+	# NOT:
+	#    x, y
+	#       z
+	# However, we do want:
+	# int       x;
+	# map<a, b> y;
+	# Solution: only give points if the last character is special and a MATCH
+	if a[-1] == b[-1] and not is_alpha_num(a[-1]):
+		similarity += 2
 
 	# Use token length as a tie-breaker;
 	similarity *= 100
@@ -366,10 +409,24 @@ def token_similarity(a, b):
 
 	return similarity
 
+
+def collapse_node(node):
+	if isinstance(node, str):
+		return node
+	else:
+		return " ".join((collapse_node(child) for child in node))
+
+
+def node_similarity(a, b):
+	assert_is_node(a)
+	assert_is_node(b)
+	return token_similarity(collapse_node(a), collapse_node(b))
+
+
 def calc_similarity(line_a, line_b):
 	similarity = 0
 	for a, b in zip(line_a, line_b):
-		similarity += token_similarity(a, b)
+		similarity += node_similarity(a, b)
 	return similarity
 
 
@@ -384,31 +441,6 @@ def expand_short_line(long_line, short_line):
 	return [short_line[0]] + expand_line_ending(long_line[1:], short_line[1:])
 
 
-# TODO: remove, or make sure that more non-empty-token matches is not an automatic win!
-def expand_one_or_the_other(line_a, line_b):
-	a_expanded = expand_line_ending(line_b, line_a)
-	b_expanded = expand_line_ending(line_a, line_b)
-
-	a_expanded_similarity = calc_similarity(line_b, a_expanded)
-	b_expanded_similarity = calc_similarity(line_a, b_expanded)
-
-	# print("line_a:                {}".format(line_a))
-	# print("line_b:                {}".format(line_b))
-	# print("a_expanded:            {}".format(a_expanded))
-	# print("b_expanded:            {}".format(b_expanded))
-	# print("a_expanded_similarity: {}".format(a_expanded_similarity))
-	# print("b_expanded_similarity: {}".format(b_expanded_similarity))
-
-	if a_expanded_similarity < b_expanded_similarity:
-		return line_a, b_expanded
-	elif b_expanded_similarity < a_expanded_similarity:
-		return a_expanded, line_b
-	elif len(a_expanded) + len(line_b) < len(line_a) + len(b_expanded):
-		return a_expanded, line_b
-	else:
-		return line_a, b_expanded
-
-
 def expand_line_ending(long_line, short_line):
 	# We want to insert '' tokens into short_line in places so as to
 	# maximize its similarity to long_line, as defined by calc_similarity.
@@ -418,7 +450,7 @@ def expand_line_ending(long_line, short_line):
 	# assuming we can insert more empty tokens after point 'b'
 	# We can fill this in dynamically (memoization style)
 
-	N = max(len(long_line), len(short_line))
+	N = len(long_line)
 	similarity = N * [N * [None]]
 
 	# print("long line:  {}".format(long_line))
@@ -427,15 +459,15 @@ def expand_line_ending(long_line, short_line):
 	def dynamic_similarity(a, b):
 		left_of_long  = len(long_line)  - a
 		left_of_short = len(short_line) - b
-		if left_of_long < left_of_long:
-			return -1000000
+		if left_of_long < left_of_short:
+			return -1000000000
 
 		if b >= len(short_line) or a >= len(long_line):
 			return 0
 
 		if not similarity[a][b]:
 			match_similarity = \
-				token_similarity(long_line[a], short_line[b]) + dynamic_similarity(a + 1, b + 1)
+				node_similarity(long_line[a], short_line[b]) + dynamic_similarity(a + 1, b + 1)
 			insert_similarity = dynamic_similarity(a + 1, b)
 			similarity[a][b] = max(match_similarity, insert_similarity)
 
@@ -445,24 +477,20 @@ def expand_line_ending(long_line, short_line):
 	a = 0
 	b = 0
 	while b < len(short_line):
-		if a < len(long_line):
-			# print("a, b: {} {}".format(a, b))
-			match_similarity = \
-				token_similarity(long_line[a], short_line[b]) + dynamic_similarity(a + 1, b + 1)
-			insert_similarity = dynamic_similarity(a + 1, b)
+		# print("a, b: {} {}".format(a, b))
+		match_similarity = \
+			node_similarity(long_line[a], short_line[b]) + dynamic_similarity(a + 1, b + 1)
+		insert_similarity = dynamic_similarity(a + 1, b)
 
-			# print("match/insert similarity: {}/{}".format(match_similarity, insert_similarity))
+		# print("match/insert similarity: {}/{}".format(match_similarity, insert_similarity))
 
-			if match_similarity >= insert_similarity:
-				result_line.append(short_line[b])
-				a += 1
-				b += 1
-			else:
-				result_line.append('')
-				a += 1
-		else:
+		if match_similarity >= insert_similarity:
 			result_line.append(short_line[b])
+			a += 1
 			b += 1
+		else:
+			result_line.append('')
+			a += 1
 
 
 	# print("similarity: {}".format(similarity))
@@ -477,32 +505,32 @@ def expand_line_ending(long_line, short_line):
 	# int       bar;
 # By inserting a phantom token between "int" and "bar" to align with "y>"
 def expand_short_lines(lines):
-	longest_line = max(lines, key=len)
-	if False:
-		for ix, line in enumerate(lines):
-			if line == longest_line:
-				continue
-			longest_line, lines[ix] = expand_one_or_the_other(longest_line, lines[ix])
-		return lines
-	else:
-		return [expand_short_line(longest_line, line) for line in lines]
+	assert isinstance(lines, list)
+	# assert is_list_of_strings(lines[0]), "Expected list of string, got {}".format(lines)
 
+	longest_line = max(lines, key=len)
+	return [expand_short_line(longest_line, line) for line in lines]
 
 def align_nodes(ast_lines):
 	if len(ast_lines) == 0:
 		return []
 
-	str_lines = collapse_list_nodes(ast_lines)
+	ast_lines = collapse_list_nodes(ast_lines)
+	ast_lines = expand_short_lines(ast_lines)
+	return align_token_lines(ast_lines)
 
-	str_lines = expand_short_lines(str_lines)
+
+def align_token_lines(ast_lines):
+	if len(ast_lines) == 0:
+		return []
 
 	token_lines  = []
 	tokens       = []
 	tokens_right = []
 
-	for line_nr, nodes in enumerate(str_lines):
+	for line_nr, nodes in enumerate(ast_lines):
 		if len(nodes) > 0:
-			assert(type(nodes[0]) is str)
+			assert type(nodes[0]) is str, "Expected str, got {}".format(nodes[0])
 			token_lines.append(line_nr)
 			tokens.append(nodes[0])
 			tokens_right.append(nodes[1:])
@@ -514,12 +542,12 @@ def align_nodes(ast_lines):
 
 	# ----------------------------------------------------
 
-	out_lines = [''] * len(str_lines)
+	out_lines = [''] * len(ast_lines)
 
 	for ix, line_nr in enumerate(token_lines):
 		out_lines[line_nr] = tokens_out_left[ix] + tokens_out_right[ix]
 
-	spam("align_nodes: ", str_lines, " -> ", out_lines)
+	spam("align_token_lines: ", ast_lines, " -> ", out_lines)
 	return out_lines
 
 
@@ -532,6 +560,7 @@ def align_tokens(tokens, has_more_on_same_line):
 	if n == 0:
 		return []
 
+	assert_is_list_of_strings(tokens)
 	spam("align_tokens: ", len(tokens))
 
 	# -----------------------------------------------------------
