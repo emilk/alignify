@@ -224,6 +224,15 @@ TESTS = [
 			a, b, c |
 		"""
 	),
+	(
+		"""
+			string mushroom = badger;
+			int snake;
+		""", """
+			string mushroom = badger;
+			int    snake;
+		"""
+	),
 ]
 
 def main():

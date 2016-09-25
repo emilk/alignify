@@ -485,8 +485,16 @@ def token_similarity(a, b):
 	assert isinstance(a, str)
 	assert isinstance(b, str)
 
+	# print("token_similarity '{}' vs '{}'".format(a, b))
+
 	if a == '' or  b == '':
-		return 0
+		# Special case to prevent this:
+		# string mushroom = badger;
+		# int               snake;
+		if a == '=' or b == '=':
+			return -1000
+		else:
+			return 0
 
 	if a == b:
 		return 10000
@@ -572,7 +580,8 @@ def expand_line_ending(long_line, short_line):
 		if not similarity[a][b]:
 			match_similarity = \
 				node_similarity(long_line[a], short_line[b]) + dynamic_similarity(a + 1, b + 1)
-			insert_similarity = dynamic_similarity(a + 1, b)
+			insert_similarity = \
+				node_similarity(long_line[a], '') + dynamic_similarity(a + 1, b)
 			similarity[a][b] = max(match_similarity, insert_similarity)
 
 		return similarity[a][b]
@@ -584,7 +593,8 @@ def expand_line_ending(long_line, short_line):
 		# print("a, b: {} {}".format(a, b))
 		match_similarity = \
 			node_similarity(long_line[a], short_line[b]) + dynamic_similarity(a + 1, b + 1)
-		insert_similarity = dynamic_similarity(a + 1, b)
+		insert_similarity = \
+			node_similarity(long_line[a], '') + dynamic_similarity(a + 1, b)
 
 		# print("match/insert similarity: {}/{}".format(match_similarity, insert_similarity))
 
