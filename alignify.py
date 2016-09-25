@@ -146,7 +146,7 @@ def assert_is_list_of_nodes(x):
 
 
 def alignify_string(s):
-	return alignify_lines(s.splitlines())
+	return alignify_lines(s.split('\n'))
 
 
 def alignify_lines(lines):
@@ -333,7 +333,7 @@ def strip_comments(ast_lines):
 	#
 	comments = [None] * len(ast_lines)
 	for line_nr, right in enumerate(ast_lines):
-		if len(right) > 0:
+		if len(right) >= 2:
 			last = right[-1]
 			if isinstance(last, str) and is_comment(last):
 				comments[line_nr] = last
@@ -345,11 +345,15 @@ def strip_comments(ast_lines):
 def append_comments(lines, comments):
 	assert_is_list_of_strings(lines)
 	if any(comments):
-		widest = len(max(lines, key=len))
+		widest = 0
+		for line_nr in range(len(lines)):
+			if comments[line_nr]:
+				widest = max(widest, len(lines[line_nr]))
+
 		for line_nr in range(len(lines)):
 			if comments[line_nr]:
 				pad_width = widest - len(lines[line_nr])
-				if any(lines):
+				if widest > 0:
 					pad_width += 1
 				lines[line_nr] += spaces(pad_width) + comments[line_nr]
 
@@ -476,7 +480,7 @@ def character_similarity(a, b):
 		else:
 			return 0 # -3
 	elif a == b:
-		return +2
+		return +10
 	else:
 		return 0 # -1
 
@@ -487,14 +491,17 @@ def token_similarity(a, b):
 
 	# print("token_similarity '{}' vs '{}'".format(a, b))
 
+	# Special case to prevent this:
+	#     string mushroom = badger;
+	#     int               snake;
+	# And this:
+	#     print a + b;
+	#     print     c;
+	if a != b and (len(a) == 1 or len(b) == 1):
+		return -500
+
 	if a == '' or  b == '':
-		# Special case to prevent this:
-		# string mushroom = badger;
-		# int               snake;
-		if a == '=' or b == '=':
-			return -1000
-		else:
-			return 0
+		return 0
 
 	if a == b:
 		return 10000
@@ -509,8 +516,11 @@ def token_similarity(a, b):
 	#    x, y
 	#       z
 	# However, we do want:
-	# int       x;
-	# map<a, b> y;
+	#    int       x;
+	#    map<a, b> y;
+	# But not:
+	#    print a + b;
+	#    print     c;
 	# Solution: only give points if the last character is special and a MATCH
 	if a[-1] == b[-1] and not is_alpha_num(a[-1]):
 		similarity += 2

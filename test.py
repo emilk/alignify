@@ -93,11 +93,20 @@ TESTS = [
 	),
 	(
 		"""
-			short(); // One-line comments should come after everything else
-			some = very.long(line);
+			// Comment
+			a = b;
 		""", """
-			short();                // One-line comments should come after everything else
-			some = very.long(line);
+			// Comment
+			a = b;
+		"""
+	),
+	(
+		"""
+			// Comment
+			a = b; // Also a comment
+		""", """
+			// Comment
+			a = b; // Also a comment
 		"""
 	),
 	(
@@ -231,6 +240,15 @@ TESTS = [
 		""", """
 			string mushroom = badger;
 			int    snake;
+		"""
+	),
+	(
+		"""
+			print a + b;
+			println c;
+		""", """
+			print   a + b;
+			println c;
 		"""
 	),
 ]

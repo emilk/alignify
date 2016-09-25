@@ -87,5 +87,10 @@ To bind the tool to a keyboard shortcut:
 Click OK and you're good to go.
 
 
+## TODO:
+* Group `<...>` for C++ templates.
+* Don't add spaces after/before {}
+
+
 ## I want to help
 Great! Just clone it and send pull-requests =)
