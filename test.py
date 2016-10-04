@@ -295,6 +295,33 @@ TESTS = [
 			println c;
 		"""
 	),
+	(
+		"""
+			name: "grass" symmetry: "X"
+			name: "grasscorner" symmetry: "L" weight: 0.0001
+		""", """
+			name: "grass"       symmetry: "X"
+			name: "grasscorner" symmetry: "L" weight: 0.0001
+		"""
+	),
+	(
+		"""
+			const std::string name = config["name"].as_string();
+			const size_t out_width = config.get_or("width", 48);
+		""", """
+			const std::string name      = config["name"].as_string();
+			const size_t      out_width = config.get_or("width", 48);
+		"""
+	),
+	(
+		"""
+			{ name: "hole", n: 3, width: 64, height: 64, }
+			{ name: "gradient", n: 3, width: 64, height: 64, symmetry: 2, foundation: true }
+		""", """
+			{ name: "hole",     n: 3, width: 64, height: 64,                               }
+			{ name: "gradient", n: 3, width: 64, height: 64, symmetry: 2, foundation: true }
+		"""
+	),
 ]
 
 def main():

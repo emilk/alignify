@@ -32,6 +32,9 @@ Code readability matters. Alignify makes it easier to produce clean and readable
 * Alignify will not insert spaces except to align.
 * Alignify may shorten the spacing in you code, but will always keep at least one space.
 
+## Limitations
+* ASCII only.
+
 
 ## How to use it
 

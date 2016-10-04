@@ -524,7 +524,7 @@ def token_similarity(a, b):
 	#     print a + b;
 	#     print     c;
 	if a != b and (is_operator_token(a) or is_operator_token(b)):
-		return -500
+		return -1000
 
 	if a == '' or  b == '':
 		return 0
@@ -580,6 +580,9 @@ def calc_similarity(line_a, line_b):
 
 # Add phantom tokens to "short_line"
 def expand_short_line(long_line, short_line):
+	assert_is_list_of_nodes(long_line)
+	assert_is_list_of_nodes(short_line)
+
 	if len(short_line) >= len(long_line):
 		return short_line
 
@@ -588,6 +591,44 @@ def expand_short_line(long_line, short_line):
 
 	return [short_line[0]] + expand_line_ending(long_line[1:], short_line[1:])
 
+
+def dynamic_similarity(context, a, b):
+	long_line = context["long_line"]
+	short_line = context["short_line"]
+	similarity = context["similarity"]
+
+	if a == len(long_line) or b == len(short_line):
+		# print("We should insert at {}/{}".format(a,b))
+		return (0, False)
+
+	left_of_long  = len(long_line)  - a
+	left_of_short = len(short_line) - b
+	assert left_of_long >= left_of_short
+
+	if similarity[a][b] is None:
+		match_similarity  = node_similarity(long_line[a], short_line[b]) + dynamic_similarity(context, a + 1, b + 1)[0]
+
+		if left_of_long <= left_of_short:
+			# print("We should match at {}/{}".format(a,b))
+			similarity[a][b] = (match_similarity, True)
+			assert similarity[a][b][1]
+		else:
+			insert_similarity = node_similarity(long_line[a], '')            + dynamic_similarity(context, a + 1, b + 0)[0]
+			insert_similarity -= 1 # Small penalty for inserts
+
+			if match_similarity >= insert_similarity:
+				# print("We should match at {}/{}".format(a,b))
+				similarity[a][b] = (match_similarity, True)
+				assert similarity[a][b][1]
+			else:
+				# print("We should insert at {}/{}".format(a,b))
+				similarity[a][b] = (insert_similarity, False)
+
+	should_match = similarity[a][b][1]
+	if not should_match:
+		assert left_of_long > left_of_short
+
+	return similarity[a][b]
 
 def expand_line_ending(long_line, short_line):
 	# We want to insert '' tokens into short_line in places so as to
@@ -599,52 +640,46 @@ def expand_line_ending(long_line, short_line):
 	# We can fill this in dynamically (memoization style)
 
 	N = len(long_line)
-	similarity = N * [N * [None]]
+
+	similarity = [[None for x in range(N)] for y in range(N)]
+	assert id(similarity[0]) != id(similarity[1])
+
+	context = {
+		"long_line":  long_line,
+		"short_line": short_line,
+		"similarity": similarity,
+	}
 
 	# print("long line:  {}".format(long_line))
 	# print("short line: {}".format(short_line))
 
-	def dynamic_similarity(a, b):
-		left_of_long  = len(long_line)  - a
-		left_of_short = len(short_line) - b
-		if left_of_long < left_of_short:
-			return -1000000000
-
-		if b >= len(short_line) or a >= len(long_line):
-			return 0
-
-		if not similarity[a][b]:
-			match_similarity = \
-				node_similarity(long_line[a], short_line[b]) + dynamic_similarity(a + 1, b + 1)
-			insert_similarity = \
-				node_similarity(long_line[a], '') + dynamic_similarity(a + 1, b)
-			similarity[a][b] = max(match_similarity, insert_similarity)
-
-		return similarity[a][b]
-
 	result_line = []
 	a = 0
 	b = 0
-	while b < len(short_line):
-		# print("a, b: {} {}".format(a, b))
-		match_similarity = \
-			node_similarity(long_line[a], short_line[b]) + dynamic_similarity(a + 1, b + 1)
-		insert_similarity = \
-			node_similarity(long_line[a], '') + dynamic_similarity(a + 1, b)
+	while len(result_line) < len(long_line):
+		# print("a/b: {}/{}".format(a,b))
+		_, match = dynamic_similarity(context, a, b)
 
-		# print("match/insert similarity: {}/{}".format(match_similarity, insert_similarity))
+		left_of_long  = len(long_line)  - a
+		left_of_short = len(short_line) - b
+		assert left_of_long >= left_of_short
 
-		if match_similarity >= insert_similarity:
+		if match:
+			# print("Matching '{}'".format(short_line[b]))
 			result_line.append(short_line[b])
 			a += 1
 			b += 1
 		else:
+			assert left_of_long > left_of_short
+			# print("Inserting")
 			result_line.append('')
 			a += 1
 
-
-	# print("similarity: {}".format(similarity))
+	# print("similarity: {}".format(context["similarity"]))
+	# print("long_line: {}".format(long_line))
 	# print("result_line: {}".format(result_line))
+
+	assert len(result_line) == len(long_line)
 
 	return result_line
 
