@@ -32,6 +32,7 @@
 # 3.1.0 - 2015-04-28  -  Switched to semantic versioning
 # 3.1.1 - 2016-09-24  -  Minor fix for misinterpreting --decrement for -- Lua comment.
 # 3.1.2 - 2016-09-24  -  Comments always aligned together right-most.
+# 4.0.0 - 2016-10-09  -  Parse spaces as tokens + smart matching of tokens
 
 # -----------------------------------------------------------
 # Algorithm overview:
@@ -113,7 +114,7 @@ import copy
 import re
 
 
-# any number followed by whatever (e.g. a comma)
+# any number followed by whatever (e.g. a comma):
 RE_NUMBER        = re.compile(r'^[+-]?\.?\d+.*$')
 RE_SIGN_OR_DIGIT = re.compile(r'^[\d+-]$')
 RE_DIGIT         = re.compile(r'\d')
@@ -126,7 +127,10 @@ def spam(*stuff):
 	pass
 
 
+# -----------------------------------------------------------
 # Type checks for debugging/readability:
+
+
 def assert_is_list_of_strings(x):
 	assert isinstance(x, list) and all((isinstance(elem, str) for elem in x)), \
 		"Expected List[str], got '{}'".format(x)
@@ -146,6 +150,9 @@ def assert_is_list_of_nodes(x):
 		x, list), "Expected List[Node], got {}: {}".format(type(x), x)
 	for elem in x:
 		assert_is_node(elem)
+
+
+# -----------------------------------------------------------
 
 
 def alignify_string(s):
@@ -204,7 +211,7 @@ def alignify_lines(lines):
 
 def is_comment(s):
 	if len(s) >= 2 and s[0] == '#' and s[1] == ' ':
-		# # one line Python comment
+		# # one line Python/bash comment
 		# We only support these with a space after, else we get confused by Lua # operator
 		return True
 
@@ -220,10 +227,10 @@ def is_comment(s):
 	return False
 
 
-# Recursive decent - breaks at end or reaching when pushing a string node starting with character 'until'.
-# Returns an AST. Each node is either a string or a list.
 def parse(s, i = 0, until = None):
 	'''
+	Recursive decent - breaks at end or reaching when pushing a string node starting with character 'until'.
+	Returns an AST. Each node is either a string or a list.
 	Input: a single line
 	A token is a continuing block of code with no unquoted spaces
 	'''
@@ -596,7 +603,7 @@ def expand_short_line(long_line, short_line):
 
 
 def dynamic_similarity(context, a, b):
-	long_line = context["long_line"]
+	long_line  = context["long_line"]
 	short_line = context["short_line"]
 	similarity = context["similarity"]
 
