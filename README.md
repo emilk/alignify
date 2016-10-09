@@ -16,7 +16,7 @@ And output:
 	float  pi   =  3; // Close enough.
 	string h2g2 = 42; // ...
 
-For more examples, see `sample_in.txt` vs `sample_out.txt`
+For more examples, see `test.py`
 
 
 ## Why
@@ -24,13 +24,31 @@ Code readability matters. Alignify makes it easier to produce clean and readable
 
 
 ## Key points
-* Alignify will align code blocks using spaces
-* Alignify will leave indentation intact (tabs as well as spaces)
+* Alignify is language agnostic. It works just as well with C++ as with JSON.
+* Alignify aligns code blocks using spaces
+* Alignify leaves indentation intact (tabs as well as spaces)
 * The output can be re-alignified (eg. to re-align after a change)
-* Alignify will recognize quoted strings (`"double"` and `'single'`)
-* Alignify will recognize `// C++`, `# Bash/Python` and `-- Lua` comments
-* Alignify will not insert spaces except to align.
+* Alignify recognizes quoted strings (`"double"` and `'single'`)
+* Alignify recognizes `// C++`, `# Bash/Python` and `-- Lua` comments
 * Alignify may shorten the spacing in you code, but will always keep at least one space.
+
+
+## Aligning numbers
+Alignify will align numbers on their decimal place:
+
+![](gifs/matrix.gif)
+
+
+## Smart align
+Alignify will intelligently insert space in the middle of a line to align similar tokens:
+
+![](gifs/templates.gif)
+
+
+## AST alignment
+Alignify will group curly braces `{...}` and brackets `[...]` and recurse:
+
+![](gifs/ast.gif)
 
 ## Limitations
 * ASCII only.
@@ -42,7 +60,6 @@ Code readability matters. Alignify makes it easier to produce clean and readable
 
 	cat code.txt | python alignify.py
 	python alignify.py code.txt
-
 
 ### As a Sublime Text 3 plugin
 Copy `alignify.py` to `Packages/User` and add the following to your user keymap:
@@ -65,8 +82,6 @@ Open Vim and mark the text you want to align with `V (shift+v)` and then `ctrl+s
 * Open System Preferences -> Keyboard
 * Under "Services", bind cmd-shift-A to Alignify
 * Select any text in any application and press cmd-shift-A to align it
-* ??????
-* PROFIT!
 
 
 ### In Qt Creator (Windows)
@@ -94,7 +109,4 @@ Click OK and you're good to go.
 
 ## TODO
 * Group `<...>` for C++ templates.
-
-
-## I want to help
-Great! Just clone it and send pull-requests =)
+* Figure out how to group `(...)` without adding spaced to empty `()` groups.

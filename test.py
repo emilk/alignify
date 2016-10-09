@@ -209,13 +209,13 @@ TESTS = [
 	),
 	(
 		"""
-			( foo, bar, foobar, badger, mushroom, snake )
-			( { a, b, c }, { a, b, c }, { a, b, c }, { a, b, c }, { a, b, c }, { a, b, c } )
-			( { foo, bar, baz }, { short }, { a, b, c }, { a, b, c }, { a, b, c }, { a, b, c } )
+			( first, second, third )
+			( { a, b, c }, [ a, b, c ], { a, b, c } )
+			( { foo, bar, baz }, [ short ], { a, b, c } )
 		""", """
-			( foo,               bar,         foobar,      badger,      mushroom,    snake       )
-			( { a,   b,   c   }, { a, b, c }, { a, b, c }, { a, b, c }, { a, b, c }, { a, b, c } )
-			( { foo, bar, baz }, { short   }, { a, b, c }, { a, b, c }, { a, b, c }, { a, b, c } )
+			( first,             second,      third       )
+			( { a,   b,   c   }, [ a, b, c ], { a, b, c } )
+			( { foo, bar, baz }, [ short   ], { a, b, c } )
 		"""
 	),
 	(
@@ -223,15 +223,15 @@ TESTS = [
 			Matrix x = {
 				{ 12, 0, 0, 0 },
 				{ 0, 0.2, 0, 0 },
-				{ 0, 0, -10, 0 },
-				{ 0.3, 0, 0, 46 },
+				{ 0, 0, 10, 0 },
+				{ 0.3, 0, 0, -127 },
 			}
 		""", """
 			Matrix x = {
-				{ 12,   0,     0,  0 },
-				{  0,   0.2,   0,  0 },
-				{  0,   0,   -10,  0 },
-				{  0.3, 0,     0, 46 },
+				{ 12,   0,    0,    0 },
+				{  0,   0.2,  0,    0 },
+				{  0,   0,   10,    0 },
+				{  0.3, 0,    0, -127 },
 			}
 		"""
 	),
@@ -240,15 +240,15 @@ TESTS = [
 			Matrix x = {
 				{12, 0, 0, 0},
 				{0, 0.2, 0, 0},
-				{0, 0, -10, 0},
-				{0.3, 0, 0, 46},
+				{0, 0, 10, 0},
+				{0.3, 0, 0, -127},
 			}
 		""", """
 			Matrix x = {
-				{12,   0,     0,  0},
-				{ 0,   0.2,   0,  0},
-				{ 0,   0,   -10,  0},
-				{ 0.3, 0,     0, 46},
+				{12,   0,    0,    0},
+				{ 0,   0.2,  0,    0},
+				{ 0,   0,   10,    0},
+				{ 0.3, 0,    0, -127},
 			}
 		"""
 	),
@@ -340,6 +340,21 @@ TESTS = [
 		""", """
 			input_ir    = readCvImage(ir_path, cv::IMREAD_GRAYSCALE);
 			input_depth = readDepthCvImage(depth_path);
+		"""
+	),
+	(
+		"""
+			Texture::Texture(
+				const void* data,
+				Size size,
+				ImageFormat format,
+				const std::string& name);
+		""", """
+			Texture::Texture(
+				const void*        data,
+				Size               size,
+				ImageFormat        format,
+				const std::string& name);
 		"""
 	),
 ]
