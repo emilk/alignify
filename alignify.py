@@ -106,9 +106,6 @@ rgb = [
 
 '''
 
-# Experimental: parse spaces as separate tokens
-g_space_tokens = True
-
 # -----------------------------------------------------------
 # Actual code time!
 
@@ -229,21 +226,14 @@ def parse(s, i = 0, until = None):
 	A token is a continuing block of code with no unquoted spaces
 	'''
 
-	if g_space_tokens:
-		SPACE_BEFORE = ""
-		SPACE_AFTER  = ""
-		NESTINGS = {
-			'{': '}',
-			# '(': ')', # Will sometimes add spaces between ()
-			'[': ']',
-			# '<': '>',
-		}
-	else:
-		SPACE_BEFORE = "}"
-		SPACE_AFTER  = "{,"
-		NESTINGS = {
-			'{': '}',
-		}
+	SPACE_BEFORE = ""
+	SPACE_AFTER  = ""
+	NESTINGS = {
+		'{': '}',
+		# '(': ')', # Will sometimes add spaces between ()
+		'[': ']',
+		# '<': '>',
+	}
 
 	nodes = []
 	n = len(s)
@@ -254,7 +244,7 @@ def parse(s, i = 0, until = None):
 		while i < n and s[i] == ' ':
 			i += 1
 			did_skip_spaces = True
-		if g_space_tokens and did_skip_spaces:
+		if did_skip_spaces:
 			nodes.append(' ')
 
 		start = i
@@ -363,8 +353,6 @@ def append_comments(lines, comments):
 		for line_nr in range(len(lines)):
 			if comments[line_nr]:
 				pad_width = widest - len(lines[line_nr])
-				if not g_space_tokens and widest > 0:
-					pad_width += 1
 				lines[line_nr] += spaces(pad_width) + comments[line_nr]
 
 	return lines
@@ -422,12 +410,11 @@ def align_columns(lines):
 	output = num_lines * ['']
 
 	for column_idx in range(num_columns):
-		if g_space_tokens:
-			# Find space tokens and append:
-			for line_nr, line in enumerate(lines):
-				if line[column_idx] == ' ':
-					output[line_nr] += ' '
-					line[column_idx] = ''
+		# Find space tokens and append:
+		for line_nr, line in enumerate(lines):
+			if line[column_idx] == ' ':
+				output[line_nr] += ' '
+				line[column_idx] = ''
 
 		# Find lines with non-empty tokens at this column:
 		line_numbers = []
@@ -445,13 +432,6 @@ def align_columns(lines):
 			max_width = 0
 			for line_nr in line_numbers:
 				max_width = max(max_width, len(output[line_nr]))
-
-			if not g_space_tokens and max_width > 0:
-				for line_nr in line_numbers:
-					if len(output[line_nr]) == max_width:
-						if not output[line_nr].endswith(' '):
-							max_width += 1
-							break
 
 			for line_nr, aligned in zip(line_numbers, aligned_column):
 				output[line_nr] += spaces(max_width - len(output[line_nr]))
