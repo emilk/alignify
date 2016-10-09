@@ -54,7 +54,7 @@
 
 g_ignore_empty_lines = True
 # Iff true, will continue aligning across empty lines.
-# False is recommended for whole-file alignment (though that is not recommended per se).
+# False is recommended for whole-file alignment(though that is recommended).
 
 g_continuous = True
 '''
@@ -113,7 +113,8 @@ import copy
 import re
 
 
-RE_NUMBER        = re.compile(r'^[+-]?\.?\d+.*$') # any number followed by whatever (e.g. a comma)
+# any number followed by whatever (e.g. a comma)
+RE_NUMBER        = re.compile(r'^[+-]?\.?\d+.*$')
 RE_SIGN_OR_DIGIT = re.compile(r'^[\d+-]$')
 RE_DIGIT         = re.compile(r'\d')
 RE_CHARACTER     = re.compile(r'[a-zA-Z]')
@@ -128,19 +129,21 @@ def spam(*stuff):
 # Type checks for debugging/readability:
 def assert_is_list_of_strings(x):
 	assert isinstance(x, list) and all((isinstance(elem, str) for elem in x)), \
-		   "Expected List[str], got '{}'".format(x)
+		"Expected List[str], got '{}'".format(x)
 
 
 def assert_is_node(x):
 	if not isinstance(x, str):
-		assert isinstance(x, list), "Expected Node (str or list), got {}: {}".format(type(x), x)
+		assert isinstance(
+			x, list), "Expected Node (str or list), got {}: {}".format(type(x), x)
 		for elem in x:
 			assert id(elem) != id(x), "Self-containing list: {}".format(x)
 			assert_is_node(elem)
 
 
 def assert_is_list_of_nodes(x):
-	assert isinstance(x, list), "Expected List[Node], got {}: {}".format(type(x), x)
+	assert isinstance(
+		x, list), "Expected List[Node], got {}: {}".format(type(x), x)
 	for elem in x:
 		assert_is_node(elem)
 
@@ -206,7 +209,7 @@ def is_comment(s):
 		return True
 
 	if len(s) >= 2 and s[0] == '/' and s[1] == '/':
-		# // one line C++ comment
+		# // one line C++ comment. Will get confused by Python3 // integer divide.
 		return True
 
 	if len(s) >= 3 and s[0] == '-' and s[1] == '-' and s[2] == ' ':
@@ -215,7 +218,6 @@ def is_comment(s):
 		return True
 
 	return False
-
 
 
 # Recursive decent - breaks at end or reaching when pushing a string node starting with character 'until'.
@@ -293,7 +295,7 @@ def parse(s, i = 0, until = None):
 				i += 1
 
 		if start != i:
-			nodes.append( s[start:i] )
+			nodes.append(s[start:i])
 			if nodes[-1][0] == until:
 				return nodes, i
 
@@ -306,7 +308,7 @@ def concat_lines(left, right):
 	assert len(left) == len(right)
 	assert_is_list_of_strings(left)
 	assert_is_list_of_strings(right)
-	return [l + r for l, r in zip (left, right)]
+	return [l + r for l, r in zip(left, right)]
 
 
 def align_and_collect(left_indentation, ast_lines):
@@ -521,7 +523,7 @@ def token_similarity(a, b):
 	if a != b and (is_operator_token(a) or is_operator_token(b)):
 		return -1000
 
-	if a == '' or  b == '':
+	if a == '' or b == '':
 		return 0
 
 	# if a == b:
@@ -549,7 +551,8 @@ def token_similarity(a, b):
 		similarity += 200
 
 	# Take word similarity into account:
-	similarity += 100 * (1.0 - levenshtein_distance(a, b) / float(len(a) + len(b)));
+	similarity += 100 * \
+		(1.0 - levenshtein_distance(a, b) / float(len(a) + len(b)))
 	# similarity -= 10 * levenshtein_distance(a, b);
 
 	# Use token length as a tie-breaker:
@@ -630,6 +633,7 @@ def dynamic_similarity(context, a, b):
 
 	return similarity[a][b]
 
+
 def expand_line_ending(long_line, short_line):
 	# We want to insert '' tokens into short_line in places so as to
 	# maximize its similarity to long_line, as defined by calc_similarity.
@@ -708,7 +712,7 @@ def expand_short_lines(in_lines):
 def spaces(num):
 	return num * ' '
 
-# tokens = list of single tokens == list of strings
+
 def align_tokens(tokens):
 	n = len(tokens)
 	if n == 0:
@@ -778,7 +782,7 @@ def main():
 		print_help()
 	else:
 		aligned = alignify_lines(lines)
-		sys.stdout.write(aligned) # no trailing newline
+		sys.stdout.write(aligned)  # no trailing newline
 
 
 if __name__ == '__main__':
@@ -799,10 +803,12 @@ if module_exists('sublime_plugin'):
 	import sublime_plugin
 
 	class AlignifyCommand(sublime_plugin.TextCommand):
+
 		def run(self, edit):
 			for region in self.view.sel():
 				if not region.empty():
-					region = self.view.line(region) # Extend selection to full lines
+					# Extend selection to full lines:
+					region = self.view.line(region)
 					original = self.view.substr(region)
 					aligned = alignify_string(original)
 					if aligned != original:
