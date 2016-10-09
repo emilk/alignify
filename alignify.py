@@ -235,7 +235,7 @@ def parse(s, i = 0, until = None):
 		NESTINGS = {
 			'{': '}',
 			# '(': ')', # Will sometimes add spaces between ()
-			# '[': ']',
+			'[': ']',
 			# '<': '>',
 		}
 	else:
@@ -488,27 +488,42 @@ def is_alpha_num(c):
 
 
 def character_similarity(a, b):
-	if re.match(RE_CHARACTER, a):
+	if a == b:
+		return 10
+	elif re.match(RE_CHARACTER, a):
 		if re.match(RE_CHARACTER, b):
 			if a.isupper() == b.isupper():
 				return 4
 			else:
 				return 2
 		else:
-			return 0 # -3
+			return 0
 	elif re.match(RE_DIGIT, a):
 		if re.match(RE_DIGIT, b):
 			return 3
 		else:
-			return 0 # -3
-	elif a == b:
-		return 10
+			return 0
 	else:
-		return 0 # -1
+		return 0
 
 
 def is_operator_token(x):
-	return len(x) == 1 and x != ' '
+	return len(x) == 1 and x != ' ' and not re.match(RE_DIGIT, x) and not re.match(RE_CHARACTER, x)
+
+
+def levenshtein_distance(seq1, seq2):
+	# from https://en.wikibooks.org/wiki/Algorithm_Implementation/Strings/Levenshtein_distance#Python
+	# With fixes for 2.7/3.5 compatibility
+	oneago = None
+	thisrow = list(range(1, len(seq2) + 1)) + [0]
+	for x in range(len(seq1)):
+		twoago, oneago, thisrow = oneago, thisrow, [0] * len(seq2) + [x + 1]
+		for y in range(len(seq2)):
+			delcost = oneago[y] + 1
+			addcost = thisrow[y - 1] + 1
+			subcost = oneago[y - 1] + (seq1[x] != seq2[y])
+			thisrow[y] = min(delcost, addcost, subcost)
+	return thisrow[len(seq2) - 1]
 
 
 def token_similarity(a, b):
@@ -529,11 +544,13 @@ def token_similarity(a, b):
 	if a == '' or  b == '':
 		return 0
 
-	if a == b:
-		return 10000
+	# if a == b:
+	# 	return 10000
 
 	similarity = 0
-	similarity += character_similarity(a[0], b[0])
+
+	# Similarity in the first character weighs more heavily than other characters
+	similarity += 100 * character_similarity(a[0], b[0])
 
 	# Check last character? The problem then is that we want
 	#    x, y
@@ -549,11 +566,14 @@ def token_similarity(a, b):
 	#    print     c;
 	# Solution: only give points if the last character is special and a MATCH
 	if a[-1] == b[-1] and not is_alpha_num(a[-1]):
-		similarity += 2
+		similarity += 200
 
-	# Use token length as a tie-breaker;
-	similarity *= 100
-	similarity -= abs(len(a) - len(b))
+	# Take word similarity into account:
+	similarity += 100 * (1.0 - levenshtein_distance(a, b) / float(len(a) + len(b)));
+	# similarity -= 10 * levenshtein_distance(a, b);
+
+	# Use token length as a tie-breaker:
+	# similarity -= abs(len(a) - len(b))
 
 	return similarity
 

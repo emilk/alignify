@@ -60,6 +60,17 @@ TESTS = [
 	),
 	(
 		"""
+			1e32 |
+			420e5 |
+			-3e-12 |
+		""", """
+			  1e32  |
+			420e5   |
+			 -3e-12 |
+		"""
+	),
+	(
+		"""
 			a b
 			a_very_long_thing
 			short thing
@@ -142,56 +153,38 @@ TESTS = [
 	),
 	(
 		"""
-			std::map<std::string, unsigned> foo;
-			std::vector<std::string> bar;
-		""", """
-			std::map<std::string, unsigned> foo;
-			std::vector<std::string>        bar;
-		"""
-	),
-	(
-		"""
-			std::map<std::string, unsigned> foo = 0;
-			int bar = 0;
-		""", """
-			std::map<std::string, unsigned> foo = 0;
-			int                             bar = 0;
-		"""
-	),
-	(
-		"""
-			std::map<std::string, unsigned> foo = 0;
+			Map<String, Int> foo;
 			int bar;
 		""", """
-			std::map<std::string, unsigned> foo = 0;
-			int                             bar;
-		"""
-	),
-	(
-		"""
-			std::map<std::string, unsigned> foo;
-			int bar = 0;
-		""", """
-			std::map<std::string, unsigned> foo;
-			int                             bar = 0;
+			Map<String, Int> foo;
+			int              bar;
 		"""
 	),
 	(
 		"""
 			Map<String, Int> foo;
-			bool bar = 10;
+			int bar = 10;
 		""", """
 			Map<String, Int> foo;
-			bool             bar = 10;
+			int              bar = 10;
 		"""
 	),
 	(
 		"""
 			Map<String, Int> foo = 10;
-			bool bar;
+			int bar;
 		""", """
 			Map<String, Int> foo = 10;
-			bool             bar;
+			int              bar;
+		"""
+	),
+	(
+		"""
+			Map<String, Int> foo = 10;
+			int bar = 10;
+		""", """
+			Map<String, Int> foo = 10;
+			int              bar = 10;
 		"""
 	),
 	(
@@ -320,6 +313,33 @@ TESTS = [
 		""", """
 			{ name: "hole",     n: 3, width: 64, height: 64,                               }
 			{ name: "gradient", n: 3, width: 64, height: 64, symmetry: 2, foundation: true }
+		"""
+	),
+	(
+		"""
+			{ name: "hole", n: 4, width: 32, height: 32 }
+			{ name: "gradient", n: 3, symmetry: 2, width: 64, height: 64, foundation: true }
+		""", """
+			{ name: "hole",     n: 4,              width: 32, height: 32                   }
+			{ name: "gradient", n: 3, symmetry: 2, width: 64, height: 64, foundation: true }
+		"""
+	),
+	(
+		"""
+		{ "symmetry": 1 },
+		{ "screenshots": 1, "width": 47 },
+		""", """
+		{ "symmetry":    1              },
+		{ "screenshots": 1, "width": 47 },
+		"""
+	),
+	(
+		"""
+			input_ir = readCvImage(ir_path, cv::IMREAD_GRAYSCALE);
+			input_depth = readDepthCvImage(depth_path);
+		""", """
+			input_ir    = readCvImage(ir_path, cv::IMREAD_GRAYSCALE);
+			input_depth = readDepthCvImage(depth_path);
 		"""
 	),
 ]
