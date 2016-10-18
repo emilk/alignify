@@ -33,6 +33,7 @@
 # 3.1.1 - 2016-09-24  -  Minor fix for misinterpreting --decrement for -- Lua comment.
 # 3.1.2 - 2016-09-24  -  Comments always aligned together right-most.
 # 4.0.0 - 2016-10-09  -  Parse spaces as tokens + smart matching of tokens
+# 4.0.1 - 2016-10-18  -  Improve levenshtein distance
 
 # -----------------------------------------------------------
 # Algorithm overview:
@@ -118,7 +119,7 @@ import re
 RE_NUMBER        = re.compile(r'^[+-]?\.?\d+.*$')
 RE_SIGN_OR_DIGIT = re.compile(r'^[\d+-]$')
 RE_DIGIT         = re.compile(r'\d')
-RE_CHARACTER     = re.compile(r'[a-zA-Z]')
+RE_CHARACTER     = re.compile(r'[a-zA-Z_]')
 
 
 # For debugging
@@ -476,43 +477,89 @@ def is_alpha_num(c):
 	return re.match(RE_CHARACTER, c) or re.match(RE_DIGIT, c)
 
 
-def character_similarity(a, b):
-	if a == b:
-		return 10
-	elif re.match(RE_CHARACTER, a):
-		if re.match(RE_CHARACTER, b):
-			if a.isupper() == b.isupper():
-				return 4
-			else:
-				return 2
-		else:
-			return 0
-	elif re.match(RE_DIGIT, a):
-		if re.match(RE_DIGIT, b):
-			return 3
-		else:
-			return 0
-	else:
-		return 0
-
-
 def is_operator_token(x):
 	return len(x) == 1 and x != ' ' and not re.match(RE_DIGIT, x) and not re.match(RE_CHARACTER, x)
 
 
-def levenshtein_distance(seq1, seq2):
-	# from https://en.wikibooks.org/wiki/Algorithm_Implementation/Strings/Levenshtein_distance#Python
-	# With fixes for 2.7/3.5 compatibility
-	oneago = None
-	thisrow = list(range(1, len(seq2) + 1)) + [0]
-	for x in range(len(seq1)):
-		twoago, oneago, thisrow = oneago, thisrow, [0] * len(seq2) + [x + 1]
-		for y in range(len(seq2)):
-			delcost = oneago[y] + 1
-			addcost = thisrow[y - 1] + 1
-			subcost = oneago[y - 1] + (seq1[x] != seq2[y])
-			thisrow[y] = min(delcost, addcost, subcost)
-	return thisrow[len(seq2) - 1]
+# -----------------------------------------------------------------------------
+# levenshtein distance distance implementation
+
+def substitution_cost_char(a, b):
+	if a == b:
+		return 0
+	elif re.match(RE_CHARACTER, a):
+		if re.match(RE_CHARACTER, b):
+			if a.isupper() == b.isupper():
+				return 1 # Same-case characters
+			else:
+				return 2 # Different-case character
+		elif re.match(RE_DIGIT, b):
+			return 3 # Character-Digit
+		else:
+			return 10 # Character-Symbol
+	elif re.match(RE_DIGIT, a):
+		if re.match(RE_DIGIT, b):
+			return 1 # Digit-digit
+		elif re.match(RE_CHARACTER, b):
+			return 2 # Digit-Character
+		else:
+			return 10 # Digit-Symbol
+	else:
+		if re.match(RE_DIGIT, b):
+			return 10 # Symbol-digit
+		elif re.match(RE_CHARACTER, b):
+			return 10 # Symbol-Character
+		else:
+			return 3 # Symbol-Symbol
+
+
+def substitution_cost(s1, i1, s2, i2):
+	# We care less about the last character, e.g. trailing comma
+	is_last_char = i1 + 1 == len(s1) or i2 + 1 == len(s2)
+	cost = substitution_cost_char(s1[i1], s2[i2])
+	if is_last_char:
+		return min(cost, 1)
+	else:
+		return cost
+
+
+def add_del_cost(s, i):
+	if i + 1 == len(s):
+		return 1 # We care less about the last character, e.g. trailing comma
+	c = s[i]
+	if re.match(RE_CHARACTER, c) or re.match(RE_DIGIT, c):
+		return 1
+	else:
+		return 10
+
+
+def levenshtein_distance(s1, s2):
+	if len(s1) < len(s2):
+		return levenshtein_distance(s2, s1)
+
+	previous_row = [0]
+	for i2 in range(len(s2)):
+		previous_row.append(previous_row[-1] + add_del_cost(s2, i2))
+
+	for i1, c1 in enumerate(s1):
+		current_row = [previous_row[0] + add_del_cost(s1, i1)]
+		for i2, c2 in enumerate(s2):
+			addcost = previous_row[i2 + 1] + add_del_cost(s1, i1)
+			delcost = current_row[i2] + add_del_cost(s2, i2)
+			subcost = previous_row[i2] + substitution_cost(s1, i1, s2, i2)
+			# print("'{}' '{}' add: {}, del: {}, sub: {}".format(c1, c2, addcost, delcost, subcost))
+			current_row.append(min(addcost, delcost, subcost))
+		# print("previous_row: {}".format(previous_row))
+		# print("current_row:  {}".format(current_row))
+		previous_row = current_row
+	return previous_row[-1]
+
+
+# -----------------------------------------------------------------------------
+
+
+def character_similarity(a, b):
+	return 10 - substitution_cost_char(a, b)
 
 
 def token_similarity(a, b):
@@ -554,13 +601,11 @@ def token_similarity(a, b):
 	#    print a + b;
 	#    print     c;
 	# Solution: only give points if the last character is special and a MATCH
-	if a[-1] == b[-1] and not is_alpha_num(a[-1]):
-		similarity += 200
+	# if a[-1] == b[-1] and not is_alpha_num(a[-1]):
+	# 	similarity += 200
 
 	# Take word similarity into account:
-	similarity += 100 * \
-		(1.0 - levenshtein_distance(a, b) / float(len(a) + len(b)))
-	# similarity -= 10 * levenshtein_distance(a, b);
+	similarity -= 10 * levenshtein_distance(a, b);
 
 	# Use token length as a tie-breaker:
 	# similarity -= abs(len(a) - len(b))
@@ -794,6 +839,19 @@ def main():
 
 if __name__ == '__main__':
 	main()
+
+	# def lev_test(a, b):
+	# 	print('"{}" - "{}": {}'.format(a, b, levenshtein_distance(a, b)))
+	# lev_test("foo", "bar")
+	# lev_test("foo", "ba")
+	# lev_test("f!", "f")
+	# lev_test("fo", "f!")
+	# lev_test("f!", "fo")
+	# lev_test("height_in_items", "label,")
+	# lev_test("height_in_items", "std::string&")
+	# lev_test("foo", "a,")
+	# lev_test("foo", "c")
+	# lev_test("A!", "a")
 
 
 def module_exists(module_name):

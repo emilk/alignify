@@ -357,6 +357,24 @@ TESTS = [
 				const std::string& name);
 		"""
 	),
+	(
+		"""
+			const cv::Mat1b& image,
+			std::vector<std::vector<size_t>>& out_components);
+		""", """
+			const cv::Mat1b&                  image,
+			std::vector<std::vector<size_t>>& out_components);
+		"""
+	),
+	(
+		"""
+			const std::string& label,
+			int height_in_items)
+		""", """
+			const std::string& label,
+			int                height_in_items)
+		"""
+	),
 ]
 
 def main():
