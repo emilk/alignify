@@ -241,7 +241,7 @@ def parse(s, i = 0, until = None):
 	NESTINGS = {
 		'{': '}',
 		# '(': ')', # Will sometimes add spaces between ()
-		'[': ']',
+		# '[': ']', # Will split [i] which is ugly
 		# '<': '>',
 	}
 
