@@ -375,6 +375,34 @@ TESTS = [
 			int                height_in_items)
 		"""
 	),
+	(
+		"""
+			vault::Client& io_vault_client,
+			View& io_view,
+			Memory& io_memory,
+			const std::vector<View>& all_views)
+		""", """
+			vault::Client&           io_vault_client,
+			View&                    io_view,
+			Memory&                  io_memory,
+			const std::vector<View>& all_views)
+		"""
+	),
+	(
+		"""
+			CameraInterface& io_camera,
+			scheduling::PoolScheduler& io_scheduler,
+			const fs::path& output_dir,
+			size_t num_frames,
+			size_t num_skip_frames)
+		""", """
+			CameraInterface&           io_camera,
+			scheduling::PoolScheduler& io_scheduler,
+			const fs::path&            output_dir,
+			size_t                     num_frames,
+			size_t                     num_skip_frames)
+		"""
+	),
 ]
 
 def main():
