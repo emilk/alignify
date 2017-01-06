@@ -34,6 +34,7 @@
 # 3.1.2 - 2016-09-24  -  Comments always aligned together right-most.
 # 4.0.0 - 2016-10-09  -  Parse spaces as tokens + smart matching of tokens
 # 4.0.1 - 2016-10-18  -  Improve levenshtein distance
+# 4.1.0 - 2017-01-06  -  Handle 1_000_000 (Rust number delimiters)
 
 # -----------------------------------------------------------
 # Algorithm overview:
@@ -116,9 +117,10 @@ import re
 
 
 # any number followed by whatever (e.g. a comma):
-RE_NUMBER        = re.compile(r'^[+-]?\.?\d+.*$')
-RE_SIGN_OR_DIGIT = re.compile(r'^[\d+-]$')
-RE_DIGIT         = re.compile(r'\d')
+# Special care is taken to handle thousand delimiters a la Rust: 1_000_000
+RE_NUMBER        = re.compile(r'^[+-]?\.?[\d_]+.*$')
+RE_SIGN_OR_DIGIT = re.compile(r'^[\d_+-]$')
+RE_DIGIT         = re.compile(r'\d_')
 RE_CHARACTER     = re.compile(r'[a-zA-Z_]')
 
 
